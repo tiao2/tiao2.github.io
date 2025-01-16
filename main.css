@@ -1,0 +1,54 @@
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+       
+#project {
+   animation: fadeIn 0.5s ease forwards;
+   position: fixed;
+   z-index: 10;
+   top: 8%;
+   left: 5%;
+   width: 25%;
+   height: 20%;
+   background-color: #eee;
+   display: none;
+   border-radius: 10px;
+  }
+
+.hr {
+  background-color: #666;
+  color: white;
+  border: none;
+  font-size: 16px;
+  }
+
+#fh {
+   position: fixed;
+   z-index: 10;
+   top: 0%;
+   left: 5%;
+   height: 5%;
+   width: 95%;
+   background-color: #666;
+  }
+
+a { color: black; }
+fieldset {color: gray; }
+
+#map {
+   animation: fadeIn 0.5s ease forwards;
+   position: fixed;
+   z-index: 10;
+   top: 8%;
+   left: 15%;
+   width: 20%;
+   height: 10%;
+   background-color: #eee;
+   display: none;
+   border-radius: 10px;
+  }
