@@ -37,7 +37,7 @@ var lst=[{
             "link":"https://turtlesim.com/tuc/"
              },{
             "name":"<img height='15px' src='https://assets.bgithub.xyz/favicons/favicon.png'/>GitHub",
-            "link":"https://github.com"
+            "link":"https://bgithub.xyz"
              }]
       }
     }
@@ -53,7 +53,7 @@ var lst=[{
          },
          "lists": [{
             "name":"Color search",
-            "link":"./lib/csl.html"
+            "link":"./csl.html"
              }]
       }
     }
