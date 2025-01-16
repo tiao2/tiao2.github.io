@@ -67,7 +67,17 @@ fieldset {color: gray; }
   }
 
 #load {
-        position: fixed;
-        left: 47.2%;
-        top: 52%;
-         }
+  position: fixed;
+  left: 47.2%;
+  top: 55%;
+}
+
+#loading {
+   position: fixed;
+   height: 100%;
+   width: 100%;
+   top: 0%;
+   left: 0%;
+   z-index: 100;
+   background-color: white;
+}
