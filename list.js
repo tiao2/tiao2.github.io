@@ -10,16 +10,16 @@ var lst=[{
          },
          "lists": [{
             "name":"the organization of Physics Lab",
-            "link":"/Physics-Lab-Organize/"
+            "link":"./Physics-Lab-Organize/"
              },{
             "name":"Webppt creator",
-            "link":"/webppt-creator/"
+            "link":"./webppt-creator/"
              },{
              "name":"Little plug-in",
-             "link":"/liitle-plug-in/"
+             "link":"./liitle-plug-in/"
              },{
              "name":"Javascript Runner",
-             "link":"/javascript-runner/"
+             "link":"./javascript-runner/"
           }]
       }
     }
@@ -33,11 +33,27 @@ var lst=[{
            "set": false
          },
          "lists": [{
-            "name":"Turtle Universe",
+            "name":"<img height='15px' src='https://www.turtlesim.com/products/turtle-universe/content/image/icon.png'/>Turtle Universe",
             "link":"https://turtlesim.com/tuc/"
              },{
-            "name":"GitHub",
+            "name":"<img height='15px' src='https://assets.bgithub.xyz/favicons/favicon.png'/>GitHub",
             "link":"https://github.com"
+             }]
+      }
+    }
+  },{
+   "title": "Public library",
+   "showmore": {
+     "sm": true,
+     "id": "pb",
+     "blockset" : {
+        "fieldset": {
+           "set": true,
+           "legend": "Public javascript library"
+         },
+         "lists": [{
+            "name":"Color search",
+            "link":"./lib/csl.html"
              }]
       }
     }
@@ -72,5 +88,5 @@ for(var l=0; l<lst.length; l++){
 }
 
 function pg(t){
-  if(t=="Projects"){pro();}else if(t=="My active places"){mapd();};
+  if(t=="Projects"){pro();}else if(t=="My active places"){mapd();}else if(t=="Public library"){pbl();};
  };
