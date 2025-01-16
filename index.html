@@ -14,11 +14,9 @@
         var a=document.getElementById("load").innerHTML;
         document.getElementById("load").innerHTML=(a.length>=10)?'Loading':(a+'.');
       },800);
-      document.getElementById("loading").style.display="block";
-      document.body.style.display='none';
    </script>
 </head>
-<body onload='document.body.style.display="block";document.getElementById("loading").style.display="none"'>
+<body onload='document.getElementById("loading").style.display="none"'>
   <img src='https://avatars.githubusercontent.com/u/169110045?v=4' height='5%' style='position: fixed; top: 0%; left: 0%; width: 5%; z-index: 10'/>
   <div id='fh'></div>
 <div id='project'></div>
