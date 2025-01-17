@@ -16,7 +16,7 @@ var lst=[{
             "link":"./webppt-creator/"
              },{
              "name":"Little plug-in",
-             "link":"./liitle-plug-in/"
+             "link":"./little-plug-in/"
              },{
              "name":"Javascript Runner",
              "link":"./javascript-runner/"
@@ -37,7 +37,7 @@ var lst=[{
             "link":"https://turtlesim.com/tuc/"
              },{
             "name":"<img height='15px' src='https://assets.bgithub.xyz/favicons/favicon.png'/>GitHub",
-            "link":"https://bgithub.xyz"
+            "link":"https://github.com"
              }]
       }
     }
@@ -53,10 +53,18 @@ var lst=[{
          },
          "lists": [{
             "name":"Color search",
-            "link":"./csl.html"
-             }]
+            "link":"./csl.html?l=cs"
+             },{
+            "name":"File Import",
+            "link": "./csl.html?l=fl"
+            }]
       }
     }
+  },{
+ "title": "GitHub",
+ "showmore": {
+     "sm": false
+     }
   }];
 
 for(var l=0; l<lst.length; l++){
@@ -88,5 +96,5 @@ for(var l=0; l<lst.length; l++){
 }
 
 function pg(t){
-  if(t=="Projects"){pro();}else if(t=="My active places"){mapd();}else if(t=="Public library"){pbl();};
+  if(t=="Projects"){pro();}else if(t=="My active places"){mapd();}else if(t=="Public library"){pbl();}else if(t=="GitHub"){og();};
  };
