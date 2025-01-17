@@ -27,3 +27,10 @@ function pbl(){
   document.getElementById("project").style.display='none';
   document.getElementById("map").style.display='none';
 }
+
+function og(){
+  document.getElementById("pb").style.display='none';
+  document.getElementById("project").style.display='none';
+  document.getElementById("map").style.display='none';
+  location.href="https://github.com/tiao2";
+}
