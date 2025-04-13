@@ -47,10 +47,10 @@ function edt(){
 
 function zbgz(){
     //Editor.CommandTab.Outputs.ShowWelcome=function(){};
-    document.getElementsByClassName('cm-line')[2].addEventListener("keydown",function(e){
+    document.getElementsByClassName('cm-line')[2].addEventListener("keyup",function(e){
         if(e.key==='Enter' && edt()==='Console'){
           e.preventDefault();
-          document.getElementsByClassName('cm-line')[2].innerHTML+='\n';
+          document.getElementsByClassName('cm-line')[2].innerText+='\n';
         };
     }); //多行代码
 };
