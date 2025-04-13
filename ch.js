@@ -18,7 +18,7 @@ function lr(l){
 
 function st(){
    var bl=document.createElement("div");
-   bl.style="position: absolute; top: 30%; left: 10%; height: 40%; width: 80%; background-color: skyblue;";
+   bl.style="position: absolute; top: 40%; left: 20%; height: 30%; width: 60%; background-color: skyblue;";
    bl.id='0000';
    document.body.appendChild(bl);
    //边框
@@ -47,6 +47,11 @@ function edt(){
 
 function zbgz(){
     //Editor.CommandTab.Outputs.ShowWelcome=function(){};
-
+    document.getElementsByClassName('cm-line')[2].addEventListener("keydown",function(e){
+        if(e.key==='Enter' && edt()==='Console'){
+          e.preventDefault();
+          document.getElementsByClassName('cm-line')[2].innerHTML+='\n';
+        };
+    }); //多行代码
 };
 st();
