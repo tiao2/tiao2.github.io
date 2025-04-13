@@ -56,7 +56,7 @@ function zbgz() {
                 {
                     Label: "Check out the code tab",
                     Style: "enter",
-                    Callback: () => Editor.CommandTab.Outputs.Tab.Editor.EditorTabs[0].Show(),
+                    Callback: () => Editor.CommandTab.Outputs.Tab.Editor.EditorTabs[0].Show()
                 },
                 { Label: "Run NetLogo code directly", Callback: () => {
                         if (Editor.CommandTab.Outputs.Tab.Galapagos.GetCode() == "")
@@ -100,7 +100,6 @@ function zbgz() {
             Editor.CommandTab.Outputs.RenderOptions(Options);
             Editor.CommandTab.Outputs.RenderResponses([], true);
             Editor.CommandTab.Outputs.Tab.RefreshPlaceholder();
-        }
-    };
+        };
 }
 st();
