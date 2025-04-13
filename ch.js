@@ -47,51 +47,60 @@ function edt(){
 
 function zbgz() {
     Editor.CommandTab.Outputs.ShowWelcome = function() {
-        if (Editor.CommandTab.Outputs.Subthread) return;
-
-        // 用户提示
-        Editor.CommandTab.Outputs.RenderRequest(Localized.Get("Command center welcome (user)"));
-
-        // 默认选项
-        var Options = [
-            {
-                Label: "Check out the code tab",
-                Style: "enter",
-                Callback: () => Editor.CommandTab.Outputs.Tab.Editor.EditorTabs[0].Show()
-            },
-            {
-                Label: "Run NetLogo code directly",
-                Callback: () => {
-                    if (Editor.CommandTab.Outputs.Tab.Galapagos.GetCode() == "") {
-                        Editor.CommandTab.Outputs.Tab.Galapagos.SetCode("print \"Hello World!\"");
+        if (Editor.CommandTab.Outputs.Subthread)
+                return;
+            // The user: How should I use this?
+            Editor.CommandTab.Outputs.RenderRequest(Localized.Get("Command center welcome (user)"));
+            // Default options
+            var Options = [
+                {
+                    Label: "Check out the code tab",
+                    Style: "enter",
+                    Callback: () => Editor.CommandTab.Outputs.Tab.Editor.EditorTabs[0].Show(),
+                },
+                { Label: "Run NetLogo code directly", Callback: () => {
+                        if (Editor.CommandTab.Outputs.Tab.Galapagos.GetCode() == "")
+                            Editor.CommandTab.Outputs.Tab.Galapagos.SetCode("print \"Hello World!\"");
+                        Editor.CommandTab.Outputs.Tab.Galapagos.Focus();
                     }
-                    Editor.CommandTab.Outputs.Tab.Galapagos.Focus();
+                },{ Label: "Set preferences",
+                     Callback: ()=> lr("ol://settings")
                 }
-            },
-            {
-                Label: "Set preferences",
-                Callback: () => lr("ol://settings")
+            ];
+            // AI response
+            if (ChatManager.Available) {
+                Editor.CommandTab.Outputs.RenderResponses([
+                    {
+                        Content: Localized.Get("Command center welcome (assistant)"),
+                        Type: ChatResponseType.Text
+                    }
+                ], false);
+                Options.push({ Label: "Talk to the computer in natural languages", Callback: () => {
+                        if (Editor.CommandTab.Outputs.Tab.Galapagos.GetCode() == "")
+                            Editor.CommandTab.Outputs.Tab.Galapagos.SetCode("create some turtles around");
+                        Editor.CommandTab.Outputs.Tab.Galapagos.Focus();
+                    } });
+                Options.push({ Label: "Ask questions about NetLogo", Callback: () => {
+                        if (Editor.CommandTab.Outputs.Tab.Galapagos.GetCode() == "")
+                           Editor.CommandTab.Outputs.Tab.Galapagos.SetCode("what's different between turtles and patches?");
+                        Editor.CommandTab.Outputs.Tab.Galapagos.Focus();
+                    } });
             }
-        ];
-
-        // 渲染响应和选项
-        Editor.CommandTab.Outputs.RenderResponses([
-            {
-                Content: Localized.Get("Command center welcome (command)"),
-                Type: ChatResponseType.Text
+            else {
+                Editor.CommandTab.Outputs.RenderResponses([
+                    {
+                        Content: Localized.Get("Command center welcome (command)"),
+                        Type: ChatResponseType.Text
+                    }
+                ], false);
+                Options.push({ Label: "Look for the documentation", Callback: () => {
+                        Editor.CommandTab.Outputs.Tab.ExecuteCommand("observer", "help", false);
+                    } });
             }
-        ], false);
-
-        Options.push({
-            Label: "Look for the documentation",
-            Callback: () => {
-                Editor.CommandTab.Outputs.Tab.ExecuteCommand("observer", "help", false);
-            }
-        });
-
-        Editor.CommandTab.Outputs.RenderOptions(Options);
-        Editor.CommandTab.Outputs.RenderResponses([], true);
-        Editor.CommandTab.Outputs.Tab.RefreshPlaceholder();
+            Editor.CommandTab.Outputs.RenderOptions(Options);
+            Editor.CommandTab.Outputs.RenderResponses([], true);
+            Editor.CommandTab.Outputs.Tab.RefreshPlaceholder();
+        }
     };
 }
 st();
