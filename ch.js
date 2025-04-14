@@ -1,12 +1,9 @@
 //Code Helper
 function lr(l){
    var links=[
-     "il://console", //自带控制台
-     "il://editor", //自带编辑器
      "ol://console", //加载进程控制台
      "ol://jse", //JavaScript 编译器
      "ol://settings", //偏好设置
-     "ol://scripts" //脚本
   ];
   var com=[];
   if(links.search(l)>=0){
@@ -46,60 +43,13 @@ function edt(){
 }
 
 function zbgz() {
-    Editor.CommandTab.Outputs.ShowWelcome = function() {
-        if (Editor.CommandTab.Outputs.Subthread)
-                return;
-            // The user: How should I use this?
-            Editor.CommandTab.Outputs.RenderRequest(Localized.Get("Command center welcome (user)"));
-            // Default options
-            var Options = [
-                {
-                    Label: "Check out the code tab",
-                    Style: "enter",
-                    Callback: () => Editor.CommandTab.Outputs.Tab.Editor.EditorTabs[0].Show()
-                },
-                { Label: "Run NetLogo code directly", Callback: () => {
-                        if (Editor.CommandTab.Outputs.Tab.Galapagos.GetCode() == "")
-                            Editor.CommandTab.Outputs.Tab.Galapagos.SetCode("print \"Hello World!\"");
-                        Editor.CommandTab.Outputs.Tab.Galapagos.Focus();
-                    }
-                },{ Label: "Set preferences",
-                     Callback: ()=> lr("ol://settings")
-                }
-            ];
-            // AI response
-            if (ChatManager.Available) {
-                Editor.CommandTab.Outputs.RenderResponses([
-                    {
-                        Content: Localized.Get("Command center welcome (assistant)"),
-                        Type: ChatResponseType.Text
-                    }
-                ], false);
-                Options.push({ Label: "Talk to the computer in natural languages", Callback: () => {
-                        if (Editor.CommandTab.Outputs.Tab.Galapagos.GetCode() == "")
-                            Editor.CommandTab.Outputs.Tab.Galapagos.SetCode("create some turtles around");
-                        Editor.CommandTab.Outputs.Tab.Galapagos.Focus();
-                    } });
-                Options.push({ Label: "Ask questions about NetLogo", Callback: () => {
-                        if (Editor.CommandTab.Outputs.Tab.Galapagos.GetCode() == "")
-                           Editor.CommandTab.Outputs.Tab.Galapagos.SetCode("what's different between turtles and patches?");
-                        Editor.CommandTab.Outputs.Tab.Galapagos.Focus();
-                    } });
-            }
-            else {
-                Editor.CommandTab.Outputs.RenderResponses([
-                    {
-                        Content: Localized.Get("Command center welcome (command)"),
-                        Type: ChatResponseType.Text
-                    }
-                ], false);
-                Options.push({ Label: "Look for the documentation", Callback: () => {
-                        Editor.CommandTab.Outputs.Tab.ExecuteCommand("observer", "help", false);
-                    } });
-            }
-            Editor.CommandTab.Outputs.RenderOptions(Options);
-            Editor.CommandTab.Outputs.RenderResponses([], true);
-            Editor.CommandTab.Outputs.Tab.RefreshPlaceholder();
-        };
+    setInterval(()=>{
+      if(document.getElementsByClassName('enter').length<2){
+        (m=>{m.className='enter';m.innerHTML='<a href="javascript:void(0)">设置您的 <strong>偏好</strong></a>';document.getElementsByClassName('options')[0].appendChild(m);})(document.createElement('li'));
+        document.getElementsByClassName('enter')[1].addEventListener('click',function(){
+             lr("ol://settings");
+         });
+     };
+   },10);
 }
 st();
