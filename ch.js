@@ -6,7 +6,7 @@ function lr(l){
      "ol://settings", //偏好设置
   ];
   var com=[];
-  if(links.indexOf(l)>=0){
+  if(links.includes(l)){
 (m=>{m.id='browser';m.style='position:absolute;top:0%;left:0%;z-index:100;width:100%;height:100%;background-color:whitesmoke',document.body.appendChild(m)})(document.createElement('div'));
 (n=>{n.innerHTML='<strong>内置浏览器</strong>';n.id='browser-head';n.style='position:absolute;top:0%;left:0%;width:100.5%;height:5%;background-color:whitesmoke;z-index:101',document.getElementById('browser').appendChild(n)})(document.createElement('div'));
 (n=>{n.value='https://tiao2.github.io/';n.id='browser-input';n.style='position:absolute;top:5%;left:0%;width:100.5%;height:5%;background-color:whitesmoke;z-index:100.5;border:1px solid black;border-radius:0px;';n.type='search';document.getElementById('browser').appendChild(n)})(document.createElement('input'));
