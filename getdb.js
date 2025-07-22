@@ -1,6 +1,6 @@
 (bt=>{
 bt.innerHTML="获取数据";
-bt.style="position:absolute;top:0%;right:0%;width:50px;height:20px;color:black;border:none";
+bt.style="position:absolute;top:0%;right:0%;width:100px;height:20px;color:black;border:none";
 bt.onclick=function(){
 TurtleEditor.Call({Type:"Visit",Target:"https://tucdb.my-board.org/con.php?user_id=62637a4cad27f22a08274d89&exp_id=686bd04e644b7b9bacb096a0"});
 document.body.innerHTML+="<div id='dialog'><h3>输入内容…</h3><input id='psd' readonly/><button id='no'><b>取消</b></button><button id='yes'>确定</button></div>";
@@ -15,14 +15,14 @@ document.getElementById("psd").addEventListener('click', function(ev){
     });
    });
 document.getElementById("yes").onclick=function(){
-    document.getElementsByClassName('cm-line')[2].innerText='set data \"'+text.replace("\"","\\\"")+'\"';
+    document.getElementsByClassName('cm-line')[2].innerText='set data "'+text.replace("\"","\\\"")+'"';
     setTimeout(()=>{
       document.getElementsByClassName('command-send')[0].click();
     },10);
     document.getElementById("dialog").style.display='none';
 };
 document.getElementById("no").onclick=function(){
-    document.getElementsByClassName('cm-line')[2].innerText='error \"用户没有输入数据\"';
+    document.getElementsByClassName('cm-line')[2].innerText='error "用户没有输入数据"';
     setTimeout(()=>{
        document.getElementsByClassName('command-send')[0].click();
     },10);
