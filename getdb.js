@@ -36,9 +36,9 @@ document.getElementById("no").onclick=function(){
     setTimeout(()=>{
        document.getElementsByClassName('command-send')[0].click();
     },10);
-    document.getElementById("dialog").style.display='none';
+    document.getElementById("dialog").remove();
 };
-//TurtleEditor.Call({Type:"Visit",Target:"https://tucdb.my-board.org/con.php?user_id=62637a4cad27f22a08274d89&exp_id=686bd04e644b7b9bacb096a0"});
+TurtleEditor.Call({Type:"Visit",Target:"https://tucdb.my-board.org/con.php?user_id=62637a4cad27f22a08274d89&exp_id=686bd04e644b7b9bacb096a0"});
 };
 document.body.appendChild(bt);
 })(document.createElement('button'));
