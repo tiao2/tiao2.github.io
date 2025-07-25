@@ -25,7 +25,9 @@ document.getElementById("psd").addEventListener('click', function(ev){
     });
    });
 document.getElementById("yes").onclick=function(){
-    document.getElementsByClassName('cm-line')[2].innerText='set data "'+text.replace("\"","\\\"")+'"';
+    const text=document.getElementById("psd").value;
+    const escapedText = text.replace(/"/g, '\\"');
+    document.getElementsByClassName('cm-line')[2].innerText='set data "'+escapedText+'"';
     setTimeout(()=>{
       document.getElementsByClassName('command-send')[0].click();
     },10);
