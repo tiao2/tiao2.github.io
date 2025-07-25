@@ -29,14 +29,14 @@ document.getElementById("yes").onclick=function(){
     setTimeout(()=>{
       document.getElementsByClassName('command-send')[0].click();
     },10);
-    document.getElementById("dialog").style.display='none';
+    document.getElementById("dialog-input-data").remove();
 };
 document.getElementById("no").onclick=function(){
     document.getElementsByClassName('cm-line')[2].innerText='error "用户没有输入数据"';
     setTimeout(()=>{
        document.getElementsByClassName('command-send')[0].click();
     },10);
-    document.getElementById("dialog").remove();
+    document.getElementById("dialog-input-data").remove();
 };
 TurtleEditor.Call({Type:"Visit",Target:"https://tucdb.my-board.org/con.php?user_id=62637a4cad27f22a08274d89&exp_id=686bd04e644b7b9bacb096a0"});
 };
