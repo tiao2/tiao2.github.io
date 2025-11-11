@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>化学实验模拟器 - By DS</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(120deg, #3498db, #2c3e50);
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .header h1 {
+            font-size: 2.4rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .content {
+            display: flex;
+            min-height: 600px;
+        }
+        
+        .control-panel {
+            width: 320px;
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .simulation-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            position: relative;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background: #f0f2f5;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        #simulationCanvas {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .panel-section {
+            margin-bottom: 25px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+        
+        .panel-section h2 {
+            background: #2c3e50;
+            color: white;
+            padding: 12px 15px;
+            font-size: 1.1rem;
+            margin: 0;
+        }
+        
+        .panel-content {
+            padding: 15px;
+        }
+        
+        .chemical-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+        }
+        
+        .chemical-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f3f4;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .chemical-item:hover {
+            background-color: #e3f2fd;
+        }
+        
+        .chemical-item.selected {
+            background-color: #2196f3;
+            color: white;
+        }
+        
+        .chemical-name {
+            font-weight: 500;
+        }
+        
+        .chemical-formula {
+            font-style: italic;
+            color: #666;
+        }
+        
+        .chemical-item.selected .chemical-formula {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .info-display {
+            min-height: 120px;
+            max-height: 200px;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 12px;
+            background: white;
+            overflow-y: auto;
+            font-size: 0.9rem;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed #eee;
+        }
+        
+        .info-name {
+            font-weight: 500;
+        }
+        
+        .info-value {
+            color: #666;
+        }
+        
+        button {
+            padding: 10px 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        button.clear {
+            background: #e74c3c;
+        }
+        
+        button.clear:hover {
+            background: #c0392b;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .instructions {
+            background: #e8f4fd;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        .reaction-log {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 10px;
+            background: #f8f9fa;
+            margin-top: 10px;
+            font-size: 0.85rem;
+        }
+        
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px dotted #ddd;
+        }
+        
+        @media (max-width: 1100px) {
+            .content {
+                flex-direction: column;
+            }
+            
+            .control-panel {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #e9ecef;
+            }
+            
+            .panel-sections {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 15px;
+            }
+            
+            .panel-section {
+                flex: 1;
+                min-width: 250px;
+            }
+        }
+        
+        .reaction-type {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            margin-left: 5px;
+        }
+        
+        .redox {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .precipitation {
+            background: #e8eaf6;
+            color: #303f9f;
+        }
+        
+        .gas {
+            background: #e0f2f1;
+            color: #00695c;
+        }
+        
+        .complex {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+        
+        .amphoteric {
+            background: #fff8e1;
+            color: #ff8f00;
+        }
+        
+        .decomposition {
+            background: #e0f7fa;
+            color: #00838f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>化学实验模拟器 - 完整反应模拟</h1>
+            <p>选择药品添加到烧杯中，观察完整的化学反应过程</p>
+        </div>
+        
+        <div class="content">
+            <div class="control-panel">
+                <div class="panel-sections">
+                    <div class="panel-section">
+                        <h2>选择药品</h2>
+                        <div class="panel-content">
+                            <div class="chemical-list" id="chemicalList">
+                                <!-- 药品列表将通过JavaScript动态生成 -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="panel-section">
+                        <h2>溶液状态</h2>
+                        <div class="panel-content">
+                            <div class="info-display" id="solutionInfo">
+                                <div class="empty-state">当前溶液为空</div>
+                            </div>
+                            <button id="clearSolutionBtn">清除溶液</button>
+                        </div>
+                    </div>
+                    
+                    <div class="panel-section">
+                        <h2>沉淀状态</h2>
+                        <div class="panel-content">
+                            <div class="info-display" id="precipitateInfo">
+                                <div class="empty-state">无沉淀</div>
+                            </div>
+                            <button id="clearPrecipitateBtn" class="clear">清除沉淀</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="instructions">
+                    <h3>操作说明</h3>
+                    <ul>
+                        <li>从左侧选择药品</li>
+                        <li>点击烧杯区域添加药品</li>
+                        <li>观察所有可能的化学反应</li>
+                        <li>沉淀会自然沉降到底部</li>
+                        <li>气泡表示气体生成反应</li>
+                        <li>使用按钮清除溶液或沉淀</li>
+                    </ul>
+                </div>
+                
+                <div class="reaction-log" id="reactionLog">
+                    <div class="log-entry">系统就绪，请开始实验...</div>
+                </div>
+            </div>
+            
+            <div class="simulation-area">
+                <div class="canvas-container">
+                    <canvas id="simulationCanvas" width="800" height="500"></canvas>
+                </div>
+                
+                <div class="status-bar">
+                    <div id="selectedChemical">当前选择: 无</div>
+                    <div id="particleCount">粒子数: 0</div>
+                    <div id="reactionCount">反应次数: 0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 化学药品数据
+        const chemicals = [
+            {name: "硝酸", formula: "HNO₃", ions: ["H⁺", "NO₃⁻"], solubility: "溶", strength: "强", ratio: [1, 1], color: null},
+            {name: "盐酸", formula: "HCl", ions: ["H⁺", "Cl⁻"], solubility: "溶", strength: "强", ratio: [1, 1], color: null},
+            {name: "硫酸", formula: "H₂SO₄", ions: ["H⁺", "SO₄²⁻"], solubility: "溶", strength: "强", ratio: [2, 1], color: null},
+            {name: "碳酸", formula: "H₂CO₃", ions: ["H⁺", "CO₃²⁻"], solubility: "溶", strength: "弱", ratio: [2, 1], color: null},
+            {name: "一水合氨", formula: "NH₃·H₂O", ions: ["NH₄⁺", "OH⁻"], solubility: "溶", strength: "弱", ratio: [1, 1], color: null},
+            {name: "硝酸铵", formula: "NH₄NO₃", ions: ["NH₄⁺", "NO₃⁻"], solubility: "溶", strength: "强", ratio: [1, 1], color: null},
+            {name: "氯化铵", formula: "NH₄Cl", ions: ["NH₄⁺", "Cl⁻"], solubility: "溶", strength: "强", ratio: [1, 1], color: null},
+            {name: "硫酸铵", formula: "(NH₄)₂SO₄", ions: ["NH₄⁺", "SO₄²⁻"], solubility: "溶", strength: "强", ratio: [2, 1], color: null},
+            {name: "碳酸铵", formula: "(NH₄)₂CO₃", ions: ["NH₄⁺", "CO₃²⁻"], solubility: "溶", strength: "强", ratio: [2, 1], color: null},
+            {name: "氢氧化钾", formula: "KOH", ions: ["K⁺", "OH⁻"], solubility: "溶", strength: "强", ratio: [1, 1], color: null},
+            {name: "硝酸钾", formula: "KNO₃", ions: ["K⁺", "NO₃⁻"], solubility: "溶", strength: "强", ratio: [1, 1], color: null},
+            {name: "氯化钾", formula: "KCl", ions: ["K⁺", "Cl⁻"], solubility: "溶", strength: "强", ratio: [1, 1], color: null},
+            {name: "硫酸钾", formula: "K₂SO₄", ions: ["K⁺", "SO₄²⁻"], solubility: "溶", strength: "强", ratio: [2, 1], color: null},
+            {name: "碳酸钾", formula: "K₂CO₃", ions: ["K⁺", "CO₃²⁻"], solubility: "溶", strength: "强", ratio: [2, 1], color: null},
+            {name: "氢氧化钠", formula: "NaOH", ions: ["Na⁺", "OH⁻"], solubility: "溶", strength: "强", ratio: [1, 1], color: null},
+            {name: "硝酸钠", formula: "NaNO₃", ions: ["Na⁺", "NO₃⁻"], solubility: "溶", strength: "强", ratio: [1, 1], color: null},
+            {name: "氯化钠", formula: "NaCl", ions: ["Na⁺", "Cl⁻"], solubility: "溶", strength: "强", ratio: [1, 1], color: null},
+            {name: "硫酸钠", formula: "Na₂SO₄", ions: ["Na⁺", "SO₄²⁻"], solubility: "溶", strength: "强", ratio: [2, 1], color: null},
+            {name: "碳酸钠", formula: "Na₂CO₃", ions: ["Na⁺", "CO₃²⁻"], solubility: "溶", strength: "强", ratio: [2, 1], color: null},
+            {name: "氢氧化钡", formula: "Ba(OH)₂", ions: ["Ba²⁺", "OH⁻"], solubility: "溶", strength: "强", ratio: [1, 2], color: null},
+            {name: "硝酸钡", formula: "Ba(NO₃)₂", ions: ["Ba²⁺", "NO₃⁻"], solubility: "溶", strength: "强", ratio: [1, 2], color: null},
+            {name: "氯化钡", formula: "BaCl₂", ions: ["Ba²⁺", "Cl⁻"], solubility: "溶", strength: "强", ratio: [1, 2], color: null},
+            {name: "硫酸钡", formula: "BaSO₄", ions: ["Ba²⁺", "SO₄²⁻"], solubility: "不", strength: "强", ratio: [1, 1], color: [240, 240, 240]},
+            {name: "碳酸钡", formula: "BaCO₃", ions: ["Ba²⁺", "CO₃²⁻"], solubility: "不", strength: "强", ratio: [1, 1], color: [240, 240, 240]},
+            {name: "氢氧化钙", formula: "Ca(OH)₂", ions: ["Ca²⁺", "OH⁻"], solubility: "微", strength: "强", ratio: [1, 2], color: [240, 240, 240]},
+            {name: "硝酸钙", formula: "Ca(NO₃)₂", ions: ["Ca²⁺", "NO₃⁻"], solubility: "溶", strength: "强", ratio: [1, 2], color: null},
+            {name: "氯化钙", formula: "CaCl₂", ions: ["Ca²⁺", "Cl⁻"], solubility: "溶", strength: "强", ratio: [1, 2], color: null},
+            {name: "硫酸钙", formula: "CaSO₄", ions: ["Ca²⁺", "SO₄²⁻"], solubility: "微", strength: "强", ratio: [1, 1], color: [240, 240, 240]},
+            {name: "碳酸钙", formula: "CaCO₃", ions: ["Ca²⁺", "CO₃²⁻"], solubility: "不", strength: "强", ratio: [1, 1], color: [240, 240, 240]},
+            {name: "氢氧化镁", formula: "Mg(OH)₂", ions: ["Mg²⁺", "OH⁻"], solubility: "不", strength: "弱", ratio: [1, 2], color: [240, 240, 240]},
+            {name: "硝酸镁", formula: "Mg(NO₃)₂", ions: ["Mg²⁺", "NO₃⁻"], solubility: "溶", strength: "强", ratio: [1, 2], color: null},
+            {name: "氯化镁", formula: "MgCl₂", ions: ["Mg²⁺", "Cl⁻"], solubility: "溶", strength: "强", ratio: [1, 2], color: null},
+            {name: "硫酸镁", formula: "MgSO₄", ions: ["Mg²⁺", "SO₄²⁻"], solubility: "不", strength: "强", ratio: [1, 1], color: [240, 240, 240]},
+            {name: "碳酸镁", formula: "MgCO₃", ions: ["Mg²⁺", "CO₃²⁻"], solubility: "微", strength: "强", ratio: [1, 1], color: [240, 240, 240]},
+            {name: "氢氧化铝", formula: "Al(OH)₃", ions: ["Al³⁺", "OH⁻"], solubility: "不", strength: "弱", ratio: [1, 3], color: [240, 240, 240]},
+            {name: "硝酸铝", formula: "Al(NO₃)₃", ions: ["Al³⁺", "NO₃⁻"], solubility: "溶", strength: "强", ratio: [1, 3], color: null},
+            {name: "氯化铝", formula: "AlCl₃", ions: ["Al³⁺", "Cl⁻"], solubility: "溶", strength: "强", ratio: [1, 3], color: null},
+            {name: "硫酸铝", formula: "Al₂(SO₄)₃", ions: ["Al³⁺", "SO₄²⁻"], solubility: "溶", strength: "强", ratio: [2, 3], color: null},
+            {name: "氢氧化锰", formula: "Mn(OH)₂", ions: ["Mn²⁺", "OH⁻"], solubility: "不", strength: "弱", ratio: [1, 2], color: [255, 200, 200]},
+            {name: "硝酸锰", formula: "Mn(NO₃)₂", ions: ["Mn²⁺", "NO₃⁻"], solubility: "溶", strength: "强", ratio: [1, 2], color: null},
+            {name: "氯化锰", formula: "MnCl₂", ions: ["Mn²⁺", "Cl⁻"], solubility: "溶", strength: "强", ratio: [1, 2], color: null},
+            {name: "硫酸锰", formula: "MnSO₄", ions: ["Mn²⁺", "SO₄²⁻"], solubility: "溶", strength: "强", ratio: [1, 1], color: null},
+            {name: "碳酸锰", formula: "MnCO₃", ions: ["Mn²⁺", "CO₃²⁻"], solubility: "不", strength: "强", ratio: [1, 1], color: [255, 200, 200]},
+            {name: "氢氧化锌", formula: "Zn(OH)₂", ions: ["Zn²⁺", "OH⁻"], solubility: "不", strength: "弱", ratio: [1, 2], color: [240, 240, 240]},
+            {name: "硝酸锌", formula: "Zn(NO₃)₂", ions: ["Zn²⁺", "NO₃⁻"], solubility: "溶", strength: "强", ratio: [1, 2], color: null},
+            {name: "氯化锌", formula: "ZnCl₂", ions: ["Zn²⁺", "Cl⁻"], solubility: "溶", strength: "强", ratio: [1, 2], color: null},
+            {name: "硫酸锌", formula: "ZnSO₄", ions: ["Zn²⁺", "SO₄²⁻"], solubility: "溶", strength: "强", ratio: [1, 1], color: null},
+            {name: "碳酸锌", formula: "ZnCO₃", ions: ["Zn²⁺", "CO₃²⁻"], solubility: "不", strength: "强", ratio: [1, 1], color: [240, 240, 240]},
+            {name: "氢氧化亚铁", formula: "Fe(OH)₂", ions: ["Fe²⁺", "OH⁻"], solubility: "不", strength: "弱", ratio: [1, 2], color: [100, 200, 100]},
+            {name: "硝酸亚铁", formula: "Fe(NO₃)₂", ions: ["Fe²⁺", "NO₃⁻"], solubility: "溶", strength: "强", ratio: [1, 2], color: null},
+            {name: "氯化亚铁", formula: "FeCl₂", ions: ["Fe²⁺", "Cl⁻"], solubility: "溶", strength: "强", ratio: [1, 2], color: null},
+            {name: "硫酸亚铁", formula: "FeSO₄", ions: ["Fe²⁺", "SO₄²⁻"], solubility: "溶", strength: "强", ratio: [1, 1], color: null},
+            {name: "碳酸亚铁", formula: "FeCO₃", ions: ["Fe²⁺", "CO₃²⁻"], solubility: "不", strength: "强", ratio: [1, 1], color: [100, 200, 100]},
+            {name: "氢氧化铁", formula: "Fe(OH)₃", ions: ["Fe³⁺", "OH⁻"], solubility: "不", strength: "弱", ratio: [1, 3], color: [210, 180, 60]},
+            {name: "硝酸铁", formula: "Fe(NO₃)₃", ions: ["Fe³⁺", "NO₃⁻"], solubility: "溶", strength: "强", ratio: [1, 3], color: null},
+            {name: "氯化铁", formula: "FeCl₃", ions: ["Fe³⁺", "Cl⁻"], solubility: "溶", strength: "强", ratio: [1, 3], color: null},
+            {name: "硫酸铁", formula: "Fe₂(SO₄)₃", ions: ["Fe³⁺", "SO₄²⁻"], solubility: "溶", strength: "强", ratio: [2, 3], color: null},
+            {name: "氢氧化铜", formula: "Cu(OH)₂", ions: ["Cu²⁺", "OH⁻"], solubility: "不", strength: "弱", ratio: [1, 2], color: [64, 128, 255]},
+            {name: "硝酸铜", formula: "Cu(NO₃)₂", ions: ["Cu²⁺", "NO₃⁻"], solubility: "溶", strength: "强", ratio: [1, 2], color: null},
+            {name: "氯化铜", formula: "CuCl₂", ions: ["Cu²⁺", "Cl⁻"], solubility: "溶", strength: "强", ratio: [1, 2], color: null},
+            {name: "硫酸铜", formula: "CuSO₄", ions: ["Cu²⁺", "SO₄²⁻"], solubility: "溶", strength: "强", ratio: [1, 1], color: null},
+            {name: "硝酸银", formula: "AgNO₃", ions: ["Ag⁺", "NO₃⁻"], solubility: "溶", strength: "强", ratio: [1, 1], color: null},
+            {name: "氯化银", formula: "AgCl", ions: ["Ag⁺", "Cl⁻"], solubility: "不", strength: "强", ratio: [1, 1], color: [240, 240, 240]},
+            {name: "硫酸银", formula: "Ag₂SO₄", ions: ["Ag⁺", "SO₄²⁻"], solubility: "不", strength: "强", ratio: [2, 1], color: [240, 240, 240]},
+            {name: "碳酸银", formula: "Ag₂CO₃", ions: ["Ag⁺", "CO₃²⁻"], solubility: "微", strength: "强", ratio: [2, 1], color: [240, 240, 240]}
+        ];
+
+        // 离子颜色映射
+        const ionColors = {
+            "Cu²⁺": [64, 128, 255],
+            "Fe²⁺": [100, 200, 100],
+            "Fe³⁺": [210, 180, 60],
+            "Mn²⁺": [255, 200, 200],
+            "H⁺": [255, 200, 200],
+            "OH⁻": [255, 255, 200],
+            "CO₃²⁻": [200, 255, 200],
+            "SO₄²⁻": [200, 230, 255],
+            "Cl⁻": [230, 230, 230],
+            "NO₃⁻": [230, 240, 255],
+            "NH₄⁺": [220, 240, 255],
+            "K⁺": [255, 240, 200],
+            "Na⁺": [255, 230, 200],
+            "Ba²⁺": [200, 255, 230],
+            "Ca²⁺": [230, 255, 230],
+            "Mg²⁺": [230, 240, 255],
+            "Al³⁺": [200, 230, 255],
+            "Zn²⁺": [230, 255, 255],
+            "Ag⁺": [255, 255, 255]
+        };
+
+        // 全局变量
+        let solution = []; // 当前溶液中的离子/分子 {name: string, amount: number}
+        let selectedChemical = null; // 当前选择的药品
+        let particles = []; // 所有粒子
+        let precipitates = []; // 沉淀物
+        let bubbles = []; // 气泡
+        let mouseDown = false;
+        let canvas, ctx;
+        let reactionCount = 0;
+
+        // 反应规则定义
+        const reactionRules = {
+            // 氧化还原反应
+            redox: [
+                {
+                    reactants: ["Fe²⁺", "NO₃⁻", "H⁺"],
+                    products: ["Fe³⁺", "NO", "H₂O"],
+                    stoichiometry: [3, 1, 4, 3, 1, 2],
+                    type: "redox"
+                }
+            ],
+            
+            // 沉淀反应
+            precipitation: [
+                {
+                    reactants: ["Ag⁺", "Cl⁻"],
+                    products: ["AgCl"],
+                    stoichiometry: [1, 1, 1],
+                    type: "precipitation"
+                },
+                {
+                    reactants: ["Ba²⁺", "SO₄²⁻"],
+                    products: ["BaSO₄"],
+                    stoichiometry: [1, 1, 1],
+                    type: "precipitation"
+                },
+                {
+                    reactants: ["Ba²⁺", "CO₃²⁻"],
+                    products: ["BaCO₃"],
+                    stoichiometry: [1, 1, 1],
+                    type: "precipitation"
+                },
+                {
+                    reactants: ["Ca²⁺", "CO₃²⁻"],
+                    products: ["CaCO₃"],
+                    stoichiometry: [1, 1, 1],
+                    type: "precipitation"
+                },
+                {
+                    reactants: ["Ag⁺", "CO₃²⁻"],
+                    products: ["Ag₂CO₃"],
+                    stoichiometry: [2, 1, 1],
+                    type: "precipitation"
+                }
+            ],
+            
+            // 气体生成反应
+            gas: [
+                {
+                    reactants: ["CO₃²⁻", "H⁺"],
+                    products: ["CO₂", "H₂O"],
+                    stoichiometry: [1, 2, 1, 1],
+                    type: "gas"
+                },
+                {
+                    reactants: ["H₂CO₃"],
+                    products: ["CO₂", "H₂O"],
+                    stoichiometry: [1, 1, 1],
+                    type: "decomposition"
+                }
+            ],
+            
+            // 配位反应
+            complex: [
+                {
+                    reactants: ["Ag⁺", "NH₃·H₂O"],
+                    products: ["[Ag(NH₃)₂]⁺", "H₂O"],
+                    stoichiometry: [1, 2, 1, 2],
+                    type: "complex"
+                },
+                {
+                    reactants: ["Cu²⁺", "NH₃·H₂O"],
+                    products: ["[Cu(NH₃)₄]²⁺", "H₂O"],
+                    stoichiometry: [1, 4, 1, 4],
+                    type: "complex"
+                },
+                {
+                    reactants: ["Zn²⁺", "NH₃·H₂O"],
+                    products: ["[Zn(NH₃)₄]²⁺", "H₂O"],
+                    stoichiometry: [1, 4, 1, 4],
+                    type: "complex"
+                }
+            ],
+            
+            // 两性反应
+            amphoteric: [
+                {
+                    reactants: ["Al(OH)₃", "OH⁻"],
+                    products: ["[Al(OH)₄]⁻"],
+                    stoichiometry: [1, 1, 1],
+                    type: "amphoteric"
+                },
+                {
+                    reactants: ["Zn(OH)₂", "OH⁻"],
+                    products: ["[Zn(OH)₄]²⁻"],
+                    stoichiometry: [1, 2, 1],
+                    type: "amphoteric"
+                }
+            ],
+            
+            // 中和反应
+            neutralization: [
+                {
+                    reactants: ["H⁺", "OH⁻"],
+                    products: ["H₂O"],
+                    stoichiometry: [1, 1, 1],
+                    type: "neutralization"
+                }
+            ]
+        };
+
+        // 初始化
+        function init() {
+            canvas = document.getElementById('simulationCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // 填充药品列表
+            populateChemicalList();
+            
+            // 添加事件监听器
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('touchstart', handleTouchStart, {passive: false});
+            canvas.addEventListener('touchend', handleTouchEnd);
+            canvas.addEventListener('touchmove', handleTouchMove, {passive: false});
+            
+            document.getElementById('clearSolutionBtn').addEventListener('click', clearSolution);
+            document.getElementById('clearPrecipitateBtn').addEventListener('click', clearPrecipitates);
+            
+            // 开始动画循环
+            requestAnimationFrame(update);
+        }
+
+        // 填充药品列表
+        function populateChemicalList() {
+            const chemicalList = document.getElementById('chemicalList');
+            chemicalList.innerHTML = '';
+            
+            chemicals.forEach(chemical => {
+                const item = document.createElement('div');
+                item.className = 'chemical-item';
+                item.innerHTML = `
+                    <span class="chemical-name">${chemical.name}</span>
+                    <span class="chemical-formula">${chemical.formula}</span>
+                `;
+                item.addEventListener('click', () => selectChemical(chemical, item));
+                chemicalList.appendChild(item);
+            });
+        }
+
+        // 选择药品
+        function selectChemical(chemical, element) {
+            selectedChemical = chemical;
+            
+            // 更新UI显示
+            document.getElementById('selectedChemical').textContent = `当前选择: ${chemical.formula}`;
+            
+            // 更新选中状态
+            document.querySelectorAll('.chemical-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            element.classList.add('selected');
+        }
+
+        // 鼠标事件处理
+        function handleMouseDown(e) {
+            e.preventDefault();
+            mouseDown = true;
+            addChemical(e.clientX, e.clientY);
+        }
+
+        function handleMouseUp() {
+            mouseDown = false;
+        }
+
+        function handleMouseMove(e) {
+            if (mouseDown) {
+                addChemical(e.clientX, e.clientY);
+            }
+        }
+
+        // 触摸事件处理
+        function handleTouchStart(e) {
+            e.preventDefault();
+            mouseDown = true;
+            const touch = e.touches[0];
+            addChemical(touch.clientX, touch.clientY);
+        }
+
+        function handleTouchEnd() {
+            mouseDown = false;
+        }
+
+        function handleTouchMove(e) {
+            if (mouseDown) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                addChemical(touch.clientX, touch.clientY);
+            }
+        }
+
+        // 添加化学药品
+        function addChemical(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+            
+            // 检查是否在烧杯区域内
+            if (isInBeaker(x, y) && selectedChemical) {
+                // 添加离子/分子到溶液
+                if (selectedChemical.solubility === "溶") {
+                    if (selectedChemical.strength === "强") {
+                        selectedChemical.ions.forEach((ion, index) => {
+                            addToSolution(ion, 0.1 * selectedChemical.ratio[index]);
+                        });
+                    } else {
+                        selectedChemical.ions.forEach((ion, index) => {
+                            addToSolution(ion, 0.02 * selectedChemical.ratio[index]);
+                        });
+                        addToSolution(selectedChemical.formula, 0.08);
+                    }
+                } else {
+                    // 不溶或微溶物质直接作为沉淀
+                    createPrecipitate(selectedChemical.formula, x, y, 0.1);
+                }
+                
+                // 创建视觉粒子
+                createParticle(x, y, selectedChemical);
+                
+                // 检查并执行化学反应
+                checkAllReactions();
+            }
+        }
+
+        // 检查是否在烧杯内
+        function isInBeaker(x, y) {
+            // 烧杯区域 - 确保整个烧杯区域都可点击
+            const beakerCenterX = canvas.width / 2;
+            const beakerTop = 80;
+            const beakerBottom = 420;
+            const beakerWidth = 300;
+            
+            // 检查是否在烧杯的矩形区域内
+            return x > beakerCenterX - beakerWidth/2 && 
+                   x < beakerCenterX + beakerWidth/2 && 
+                   y > beakerTop && 
+                   y < beakerBottom;
+        }
+
+        // 添加到溶液
+        function addToSolution(component, amount) {
+            const existing = solution.find(item => item.name === component);
+            if (existing) {
+                existing.amount += amount;
+            } else {
+                solution.push({name: component, amount: amount});
+            }
+            updateSolutionInfo();
+        }
+
+        // 从溶液移除组分
+        function removeFromSolution(component, amount) {
+            const existing = solution.find(item => item.name === component);
+            if (existing) {
+                existing.amount -= amount;
+                if (existing.amount <= 0.001) {
+                    solution = solution.filter(item => item.name !== component);
+                }
+            }
+            updateSolutionInfo();
+        }
+
+        // 创建视觉粒子
+        function createParticle(x, y, chemical) {
+            // 确定粒子颜色
+            let color = [240, 240, 240]; // 默认颜色
+            
+            // 优先使用药品的特定颜色
+            if (chemical.color) {
+                color = chemical.color;
+            } 
+            // 否则使用第一个离子的颜色
+            else {
+                const firstIon = chemical.ions[0];
+                if (ionColors[firstIon]) {
+                    color = ionColors[firstIon];
+                }
+            }
+            
+            // 创建粒子
+            particles.push({
+                x: x,
+                y: y,
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2,
+                radius: 3 + Math.random() * 2,
+                color: `rgb(${color[0]}, ${color[1]}, ${color[2]})`,
+                type: chemical.solubility === "溶" ? 'dissolved' : 'precipitate',
+                lifetime: 100,
+                chemical: chemical.formula
+            });
+        }
+
+        // 创建沉淀
+        function createPrecipitate(formula, x, y, amount) {
+            // 查找沉淀的颜色
+            let color = [200, 200, 200]; // 默认沉淀颜色
+            const chemical = chemicals.find(c => c.formula === formula);
+            if (chemical && chemical.color) {
+                color = chemical.color;
+            }
+            
+            precipitates.push({
+                formula: formula,
+                x: x,
+                y: y,
+                amount: amount,
+                radius: 5 + Math.random() * 3,
+                color: `rgb(${color[0]}, ${color[1]}, ${color[2]})`,
+                vx: (Math.random() - 0.5) * 0.5,
+                vy: 0
+            });
+            updatePrecipitateInfo();
+        }
+
+        // 创建气泡
+        function createBubble(x, y, count = 5) {
+            for (let i = 0; i < count; i++) {
+                bubbles.push({
+                    x: x + (Math.random() - 0.5) * 30,
+                    y: y,
+                    radius: 2 + Math.random() * 3,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: -1 - Math.random() * 2,
+                    lifetime: 100
+                });
+            }
+        }
+
+        // 检查并执行所有可能的化学反应
+        function checkAllReactions() {
+            let reactionOccurred = false;
+            
+            // 检查每种类型的反应
+            for (const reactionType in reactionRules) {
+                for (const reaction of reactionRules[reactionType]) {
+                    if (checkAndExecuteReaction(reaction)) {
+                        reactionOccurred = true;
+                    }
+                }
+            }
+            
+            // 移除量为0的组分
+            solution = solution.filter(item => item.amount > 0.001);
+            updateSolutionInfo();
+            
+            return reactionOccurred;
+        }
+
+        // 检查并执行单个反应
+        function checkAndExecuteReaction(reaction) {
+            // 检查反应物是否存在
+            const reactantsPresent = reaction.reactants.every(reactant => 
+                solution.some(item => item.name === reactant && item.amount > 0.001)
+            );
+            
+            if (!reactantsPresent) return false;
+            
+            // 计算最大反应量
+            let maxReactionAmount = Infinity;
+            for (let i = 0; i < reaction.reactants.length; i++) {
+                const reactant = reaction.reactants[i];
+                const stoichiometry = reaction.stoichiometry[i];
+                const reactantAmount = solution.find(item => item.name === reactant).amount;
+                maxReactionAmount = Math.min(maxReactionAmount, reactantAmount / stoichiometry);
+            }
+            
+            // 如果反应量太小，不执行反应
+            if (maxReactionAmount < 0.001) return false;
+            
+            // 执行反应
+            for (let i = 0; i < reaction.reactants.length; i++) {
+                const reactant = reaction.reactants[i];
+                const stoichiometry = reaction.stoichiometry[i];
+                removeFromSolution(reactant, maxReactionAmount * stoichiometry);
+            }
+            
+            for (let i = 0; i < reaction.products.length; i++) {
+                const product = reaction.products[i];
+                const stoichiometry = reaction.stoichiometry[reaction.reactants.length + i];
+                addToSolution(product, maxReactionAmount * stoichiometry);
+                
+                // 特殊处理：沉淀和气体
+                if (reaction.type === "precipitation") {
+                    createPrecipitate(
+                        product,
+                        canvas.width/2 + (Math.random() - 0.5) * 100,
+                        300 + Math.random() * 50,
+                        maxReactionAmount * stoichiometry
+                    );
+                } else if (reaction.type === "gas" || reaction.type === "decomposition") {
+                    createBubble(
+                        canvas.width/2 + (Math.random() - 0.5) * 100,
+                        350 + Math.random() * 50,
+                        Math.ceil(maxReactionAmount * 10)
+                    );
+                }
+            }
+            
+            // 更新反应计数和日志
+            reactionCount++;
+            addToLog(
+                `${getReactionDescription(reaction)}`,
+                reaction.type
+            );
+            
+            return true;
+        }
+
+        // 获取反应描述
+        function getReactionDescription(reaction) {
+            const reactants = reaction.reactants.join(" + ");
+            const products = reaction.products.join(" + ");
+            return `${reactants} → ${products}`;
+        }
+
+        // 获取反应类型标签
+        function getReactionTypeLabel(type) {
+            const labels = {
+                redox: "氧化还原",
+                precipitation: "沉淀",
+                gas: "气体生成",
+                complex: "配位",
+                amphoteric: "两性",
+                decomposition: "分解",
+                neutralization: "中和"
+            };
+            return labels[type] || type;
+        }
+
+        // 清除溶液
+        function clearSolution() {
+            solution = [];
+            particles = particles.filter(p => p.type !== 'dissolved');
+            updateSolutionInfo();
+            addToLog("溶液已清除", "neutralization");
+        }
+
+        // 清除沉淀
+        function clearPrecipitates() {
+            precipitates = [];
+            particles = particles.filter(p => p.type !== 'precipitate');
+            updatePrecipitateInfo();
+            addToLog("沉淀已清除", "precipitation");
+        }
+
+        // 更新溶液信息显示
+        function updateSolutionInfo() {
+            const solutionInfo = document.getElementById('solutionInfo');
+            if (solution.length === 0) {
+                solutionInfo.innerHTML = '<div class="empty-state">当前溶液为空</div>';
+            } else {
+                let html = '';
+                solution.forEach(item => {
+                    html += `
+                        <div class="info-item">
+                            <span class="info-name">${item.name}</span>
+                            <span class="info-value">${item.amount.toFixed(2)}</span>
+                        </div>
+                    `;
+                });
+                solutionInfo.innerHTML = html;
+            }
+        }
+
+        // 更新沉淀信息显示
+        function updatePrecipitateInfo() {
+            const precipitateInfo = document.getElementById('precipitateInfo');
+            if (precipitates.length === 0) {
+                precipitateInfo.innerHTML = '<div class="empty-state">无沉淀</div>';
+            } else {
+                let html = '';
+                precipitates.forEach(p => {
+                    html += `
+                        <div class="info-item">
+                            <span class="info-name">${p.formula}</span>
+                            <span class="info-value">${p.amount.toFixed(2)}</span>
+                        </div>
+                    `;
+                });
+                precipitateInfo.innerHTML = html;
+            }
+        }
+
+        // 添加到反应日志
+        function addToLog(message, type) {
+            const log = document.getElementById('reactionLog');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            const typeLabel = getReactionTypeLabel(type);
+            const typeClass = type || 'neutralization';
+            
+            entry.innerHTML = `
+                ${message} 
+                <span class="reaction-type ${typeClass}">${typeLabel}</span>
+            `;
+            
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // 计算溶液颜色
+        function calculateSolutionColor() {
+            let total = 0;
+            let colorAccumulator = [0, 0, 0];
+            
+            // 计算有色离子的加权颜色
+            solution.forEach(item => {
+                const ion = item.name;
+                const amount = item.amount;
+                if (ionColors[ion]) {
+                    const color = ionColors[ion];
+                    colorAccumulator[0] += color[0] * amount;
+                    colorAccumulator[1] += color[1] * amount;
+                    colorAccumulator[2] += color[2] * amount;
+                    total += amount;
+                }
+            });
+            
+            if (total > 0) {
+                const r = Math.min(255, Math.max(0, Math.round(colorAccumulator[0] / total)));
+                const g = Math.min(255, Math.max(0, Math.round(colorAccumulator[1] / total)));
+                const b = Math.min(255, Math.max(0, Math.round(colorAccumulator[2] / total)));
+                return `rgba(${r}, ${g}, ${b}, 0.7)`;
+            }
+            
+            return 'rgba(200, 220, 240, 0.3)'; // 默认颜色
+        }
+
+        // 绘制烧杯
+        function drawBeaker() {
+            const centerX = canvas.width / 2;
+            const top = 80;
+            const bottom = 420;
+            const width = 300;
+            const neckWidth = 180;
+            const neckHeight = 60;
+            
+            // 绘制烧杯轮廓
+            ctx.strokeStyle = '#7f8c8d';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            // 烧杯底部
+            ctx.moveTo(centerX - width/2, bottom);
+            ctx.lineTo(centerX + width/2, bottom);
+            
+            // 烧杯右侧
+            ctx.lineTo(centerX + width/2, top + neckHeight);
+            
+            // 烧杯颈部右侧
+            ctx.lineTo(centerX + neckWidth/2, top + neckHeight);
+            ctx.lineTo(centerX + neckWidth/2, top);
+            
+            // 烧杯口
+            ctx.lineTo(centerX - neckWidth/2, top);
+            
+            // 烧杯颈部左侧
+            ctx.lineTo(centerX - neckWidth/2, top + neckHeight);
+            ctx.lineTo(centerX - width/2, top + neckHeight);
+            
+            // 烧杯左侧
+            ctx.lineTo(centerX - width/2, bottom);
+            
+            ctx.stroke();
+            
+            // 绘制溶液
+            const solutionColor = calculateSolutionColor();
+            ctx.fillStyle = solutionColor;
+            ctx.beginPath();
+            
+            // 溶液表面（水平线）
+            const solutionLevel = bottom - 200;
+            ctx.moveTo(centerX - width/2, bottom);
+            ctx.lineTo(centerX + width/2, bottom);
+            ctx.lineTo(centerX + width/2, solutionLevel);
+            ctx.lineTo(centerX - width/2, solutionLevel);
+            ctx.closePath();
+            ctx.fill();
+            
+            // 绘制烧杯标签
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('烧杯', centerX, bottom + 30);
+        }
+
+        // 绘制粒子
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+                ctx.fillStyle = particle.color;
+                ctx.fill();
+                
+                // 更新粒子位置
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.lifetime--;
+                
+                // 根据粒子类型应用不同的物理行为
+                if (particle.type === 'dissolved') {
+                    // 在溶液中随机移动
+                    particle.vx += (Math.random() - 0.5) * 0.2;
+                    particle.vy += (Math.random() - 0.5) * 0.2;
+                    
+                    // 限制速度
+                    const speed = Math.sqrt(particle.vx * particle.vx + particle.vy * particle.vy);
+                    if (speed > 2) {
+                        particle.vx = (particle.vx / speed) * 2;
+                        particle.vy = (particle.vy / speed) * 2;
+                    }
+                    
+                    // 限制在烧杯内
+                    const centerX = canvas.width / 2;
+                    if (particle.x < centerX - 140) particle.x = centerX - 140;
+                    if (particle.x > centerX + 140) particle.x = centerX + 140;
+                    if (particle.y < 100) particle.y = 100;
+                    if (particle.y > 400) particle.y = 400;
+                } else if (particle.type === 'precipitate') {
+                    // 沉淀下沉
+                    particle.vy += 0.1;
+                    
+                    // 沉淀到达底部后停止
+                    if (particle.y > 400) {
+                        particle.y = 400;
+                        particle.vy = 0;
+                    }
+                }
+            });
+            
+            // 移除生命周期结束的粒子
+            particles = particles.filter(p => p.lifetime > 0);
+        }
+
+        // 绘制沉淀
+        function drawPrecipitates() {
+            precipitates.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+                
+                // 沉淀下沉
+                p.y += 0.5;
+                p.x += p.vx;
+                
+                // 沉淀到达底部后停止
+                if (p.y > 400) {
+                    p.y = 400;
+                    p.vy = 0;
+                }
+                
+                // 限制在烧杯内
+                const centerX = canvas.width / 2;
+                if (p.x < centerX - 140) {
+                    p.x = centerX - 140;
+                    p.vx *= -0.5;
+                }
+                if (p.x > centerX + 140) {
+                    p.x = centerX + 140;
+                    p.vx *= -0.5;
+                }
+            });
+        }
+
+        // 绘制气泡
+        function drawBubbles() {
+            bubbles.forEach(bubble => {
+                ctx.beginPath();
+                ctx.arc(bubble.x, bubble.y, bubble.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(200, 230, 255, 0.7)';
+                ctx.fill();
+                
+                // 气泡上升
+                bubble.y += bubble.vy;
+                bubble.x += bubble.vx;
+                bubble.lifetime--;
+                
+                // 气泡到达顶部后消失
+                if (bubble.y < 50) {
+                    bubble.lifetime = 0;
+                }
+            });
+            
+            // 移除生命周期结束的气泡
+            bubbles = bubbles.filter(b => b.lifetime > 0);
+        }
+
+        // 更新UI信息
+        function updateUI() {
+            document.getElementById('particleCount').textContent = `粒子数: ${particles.length + precipitates.length + bubbles.length}`;
+            document.getElementById('reactionCount').textContent = `反应次数: ${reactionCount}`;
+        }
+
+        // 主更新循环
+        function update() {
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制场景
+            drawBeaker();
+            drawParticles();
+            drawPrecipitates();
+            drawBubbles();
+            
+            // 更新UI信息
+            updateUI();
+            
+            // 继续动画循环
+            requestAnimationFrame(update);
+        }
+
+        // 初始化应用
+        window.onload = init;
+    </script>
+</body>
+</html>
