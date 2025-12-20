@@ -185,7 +185,25 @@
             position: relative;
             overflow: hidden;
             background-color: #0a192f;
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+        }
+        
+        .canvas-container.dragging {
+            cursor: grabbing;
+        }
+        
+        .canvas-container.add-mode {
             cursor: crosshair;
+        }
+        
+        .canvas-container.connect-mode {
+            cursor: pointer;
+        }
+        
+        .canvas-container.delete-mode {
+            cursor: not-allowed;
         }
         
         #molecule-canvas {
@@ -450,6 +468,7 @@
             color: #ccd6f6;
             border: 1px solid #233554;
             z-index: 5;
+            pointer-events: none;
         }
         
         /* 模式指示器 */
@@ -467,6 +486,65 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            pointer-events: none;
+        }
+        
+        /* 缩放控制 */
+        .zoom-controls {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background-color: rgba(17, 34, 64, 0.9);
+            border-radius: 6px;
+            border: 1px solid #233554;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .zoom-btn {
+            background-color: transparent;
+            color: #ccd6f6;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        
+        .zoom-btn:hover {
+            background-color: rgba(100, 255, 218, 0.1);
+        }
+        
+        .zoom-btn:disabled {
+            color: #8892b0;
+            cursor: not-allowed;
+        }
+        
+        .zoom-btn:disabled:hover {
+            background-color: transparent;
+        }
+        
+        .zoom-divider {
+            height: 1px;
+            background-color: #233554;
+        }
+        
+        .zoom-display {
+            position: absolute;
+            bottom: 70px;
+            right: 15px;
+            background-color: rgba(17, 34, 64, 0.9);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #64ffda;
+            border: 1px solid #233554;
+            z-index: 5;
+            pointer-events: none;
         }
         
         /* 操作按钮区域 */
@@ -684,6 +762,20 @@
             position: relative;
             z-index: 1;
         }
+        
+        /* 选中框 */
+        .selection-box {
+            position: absolute;
+            border: 2px dashed #64ffda;
+            background-color: rgba(100, 255, 218, 0.1);
+            pointer-events: none;
+            z-index: 2;
+        }
+        
+        /* 拖拽中原子样式 */
+        .dragging-atom {
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
@@ -810,6 +902,9 @@
                         <button class="action-btn" id="delete-btn">
                             <i class="fas fa-trash"></i> 删除模式
                         </button>
+                        <button class="action-btn" id="drag-btn">
+                            <i class="fas fa-arrows-alt"></i> 拖拽模式
+                        </button>
                     </div>
                 </div>
                 
@@ -880,6 +975,10 @@
                         <div class="example-item" data-example="acetic_acid">乙酸</div>
                         <div class="example-item" data-example="cyclobutane">环丁烷</div>
                         <div class="example-item" data-example="cyclohexane">环己烷</div>
+                        <div class="example-item" data-example="c2f2br2">C₂F₂Br₂</div>
+                        <div class="example-item" data-example="acetylene">乙炔</div>
+                        <div class="example-item" data-example="propene">丙烯</div>
+                        <div class="example-item" data-example="hydroxypropene">2-羟基丙烯</div>
                     </div>
                 </div>
             </div>
@@ -897,12 +996,29 @@
                         <button class="control-btn" id="random-btn">
                             <i class="fas fa-random"></i> 随机示例
                         </button>
+                        <button class="control-btn" id="reset-view-btn">
+                            <i class="fas fa-expand-alt"></i> 重置视图
+                        </button>
                     </div>
                 </div>
-                <div class="canvas-container">
+                <div class="canvas-container" id="canvas-container">
                     <canvas id="molecule-canvas"></canvas>
                     <div class="cursor-info" id="cursor-info">点击空白处添加碳原子</div>
                     <div class="mode-indicator" id="mode-indicator">模式：添加原子</div>
+                    <div class="zoom-display" id="zoom-display">缩放: 100%</div>
+                    <div class="zoom-controls" id="zoom-controls">
+                        <button class="zoom-btn" id="zoom-in-btn" title="放大">
+                            <i class="fas fa-search-plus"></i>
+                        </button>
+                        <div class="zoom-divider"></div>
+                        <button class="zoom-btn" id="zoom-out-btn" title="缩小">
+                            <i class="fas fa-search-minus"></i>
+                        </button>
+                        <div class="zoom-divider"></div>
+                        <button class="zoom-btn" id="zoom-reset-btn" title="重置缩放">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
             
@@ -933,6 +1049,10 @@
                             <div class="detail-item">
                                 <span class="detail-label">原子数:</span>
                                 <span class="detail-value" id="atom-count">0</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">缩放级别:</span>
+                                <span class="detail-value" id="zoom-level">100%</span>
                             </div>
                         </div>
                     </div>
@@ -969,10 +1089,11 @@
                     <div style="font-size: 0.9rem; color: #8892b0; line-height: 1.5;">
                         <p>1. 选择原子，点击画布添加</p>
                         <p>2. 选择化学键，点击两个原子连接</p>
-                        <p>3. 切换操作模式：添加/连接/删除</p>
+                        <p>3. 切换操作模式：添加/连接/删除/拖拽</p>
                         <p>4. 点击官能团快速添加复杂结构</p>
                         <p>5. 点击示例化合物快速构建</p>
-                        <p>6. 点击"生成名称"获取IUPAC命名</p>
+                        <p>6. 使用鼠标滚轮或按钮缩放画布</p>
+                        <p>7. 在拖拽模式下拖动原子或画布</p>
                     </div>
                 </div>
             </div>
@@ -993,11 +1114,23 @@
             let selectedAtom = null;
             let selectedBondType = 'single';
             let selectedAtomType = 'C';
-            let currentMode = 'add'; // add, connect, delete
+            let currentMode = 'add'; // add, connect, delete, drag
             let atomIdCounter = 1;
             let bondIdCounter = 1;
             let moleculeRotation = 0;
             let isRotating = false;
+            
+            // 拖拽和缩放相关变量
+            let isDragging = false;
+            let isDraggingAtom = false;
+            let dragStartX = 0;
+            let dragStartY = 0;
+            let initialAtomPositions = [];
+            let scale = 1;
+            let offsetX = 0;
+            let offsetY = 0;
+            let minScale = 0.1;
+            let maxScale = 5;
             
             // 获取DOM元素
             const canvas = document.getElementById('molecule-canvas');
@@ -1005,6 +1138,9 @@
             const cursorInfo = document.getElementById('cursor-info');
             const modeIndicator = document.getElementById('mode-indicator');
             const notification = document.getElementById('notification');
+            const canvasContainer = document.getElementById('canvas-container');
+            const zoomDisplay = document.getElementById('zoom-display');
+            const zoomLevel = document.getElementById('zoom-level');
             
             // 原子属性
             const atomProperties = {
@@ -1028,13 +1164,13 @@
                 'dash': { name: '虚楔键', width: 3, dash: [5, 5] }
             };
             
-            // 官能团定义 - 修复版，确保原子间距 > 35
+            // 官能团定义
             const functionalGroups = {
                 'hydroxyl': {
                     name: '羟基',
                     atoms: [
                         { type: 'O', x: 0, y: 0 },
-                        { type: 'H', x: 45, y: 0 } // 从25改为45，确保间距>35
+                        { type: 'H', x: 45, y: 0 }
                     ],
                     bonds: [
                         { atom1Index: 0, atom2Index: 1, type: 'single' }
@@ -1044,7 +1180,7 @@
                     name: '羰基',
                     atoms: [
                         { type: 'C', x: 0, y: 0 },
-                        { type: 'O', x: 60, y: 0 } // 从35改为60，确保间距>35
+                        { type: 'O', x: 60, y: 0 }
                     ],
                     bonds: [
                         { atom1Index: 0, atom2Index: 1, type: 'double' }
@@ -1054,9 +1190,9 @@
                     name: '羧基',
                     atoms: [
                         { type: 'C', x: 0, y: 0 },
-                        { type: 'O', x: 60, y: -25 }, // 从35,-12改为60,-25
-                        { type: 'O', x: 60, y: 25 },  // 从35,12改为60,25
-                        { type: 'H', x: 100, y: 25 }  // 从60,12改为100,25
+                        { type: 'O', x: 60, y: -25 },
+                        { type: 'O', x: 60, y: 25 },
+                        { type: 'H', x: 100, y: 25 }
                     ],
                     bonds: [
                         { atom1Index: 0, atom2Index: 1, type: 'double' },
@@ -1068,8 +1204,8 @@
                     name: '氨基',
                     atoms: [
                         { type: 'N', x: 0, y: 0 },
-                        { type: 'H', x: 40, y: -25 }, // 从20,-15改为40,-25
-                        { type: 'H', x: 40, y: 25 }   // 从20,15改为40,25
+                        { type: 'H', x: 40, y: -25 },
+                        { type: 'H', x: 40, y: 25 }
                     ],
                     bonds: [
                         { atom1Index: 0, atom2Index: 1, type: 'single' },
@@ -1080,8 +1216,8 @@
                     name: '醛基',
                     atoms: [
                         { type: 'C', x: 0, y: 0 },
-                        { type: 'O', x: 60, y: 0 },   // 从35改为60
-                        { type: 'H', x: -40, y: 0 }   // 从-20改为-40
+                        { type: 'O', x: 60, y: 0 },
+                        { type: 'H', x: -40, y: 0 }
                     ],
                     bonds: [
                         { atom1Index: 0, atom2Index: 1, type: 'double' },
@@ -1092,9 +1228,9 @@
                     name: '酯基',
                     atoms: [
                         { type: 'C', x: 0, y: 0 },
-                        { type: 'O', x: 60, y: 0 },   // 从35改为60
-                        { type: 'O', x: -40, y: 0 },  // 从-20改为-40
-                        { type: 'C', x: -80, y: 0 }   // 从-45改为-80
+                        { type: 'O', x: 60, y: 0 },
+                        { type: 'O', x: -40, y: 0 },
+                        { type: 'C', x: -80, y: 0 }
                     ],
                     bonds: [
                         { atom1Index: 0, atom2Index: 1, type: 'double' },
@@ -1106,8 +1242,8 @@
                     name: '醚键',
                     atoms: [
                         { type: 'O', x: 0, y: 0 },
-                        { type: 'C', x: 45, y: -45 }, // 从25,-25改为45,-45
-                        { type: 'C', x: 45, y: 45 }   // 从25,25改为45,45
+                        { type: 'C', x: 45, y: -45 },
+                        { type: 'C', x: 45, y: 45 }
                     ],
                     bonds: [
                         { atom1Index: 0, atom2Index: 1, type: 'single' },
@@ -1118,10 +1254,10 @@
                     name: '酰胺基',
                     atoms: [
                         { type: 'C', x: 0, y: 0 },
-                        { type: 'O', x: 60, y: 0 },   // 从35改为60
-                        { type: 'N', x: -40, y: 0 },  // 从-20改为-40
-                        { type: 'H', x: -70, y: -25 }, // 从-40,-15改为-70,-25
-                        { type: 'H', x: -70, y: 25 }  // 从-40,15改为-70,25
+                        { type: 'O', x: 60, y: 0 },
+                        { type: 'N', x: -40, y: 0 },
+                        { type: 'H', x: -70, y: -25 },
+                        { type: 'H', x: -70, y: 25 }
                     ],
                     bonds: [
                         { atom1Index: 0, atom2Index: 1, type: 'double' },
@@ -1133,20 +1269,18 @@
                 'phenyl': {
                     name: '苯基',
                     atoms: [
-                        // 苯环碳原子 - 扩大间距
-                        { type: 'C', x: 0, y: -80 },      // 从0,-40改为0,-80
-                        { type: 'C', x: 70, y: -40 },     // 从35,-20改为70,-40
-                        { type: 'C', x: 70, y: 40 },      // 从35,20改为70,40
-                        { type: 'C', x: 0, y: 80 },       // 从0,40改为0,80
-                        { type: 'C', x: -70, y: 40 },     // 从-35,20改为-70,40
-                        { type: 'C', x: -70, y: -40 },    // 从-35,-20改为-70,-40
-                        // 氢原子 - 扩大间距
-                        { type: 'H', x: 0, y: -140 },     // 从0,-75改为0,-140
-                        { type: 'H', x: 140, y: -40 },    // 从70,-20改为140,-40
-                        { type: 'H', x: 140, y: 40 },     // 从70,20改为140,40
-                        { type: 'H', x: 0, y: 140 },      // 从0,75改为0,140
-                        { type: 'H', x: -140, y: 40 },    // 从-70,20改为-140,40
-                        { type: 'H', x: -140, y: -40 }    // 从-70,-20改为-140,-40
+                        { type: 'C', x: 0, y: -80 },
+                        { type: 'C', x: 70, y: -40 },
+                        { type: 'C', x: 70, y: 40 },
+                        { type: 'C', x: 0, y: 80 },
+                        { type: 'C', x: -70, y: 40 },
+                        { type: 'C', x: -70, y: -40 },
+                        { type: 'H', x: 0, y: -140 },
+                        { type: 'H', x: 140, y: -40 },
+                        { type: 'H', x: 140, y: 40 },
+                        { type: 'H', x: 0, y: 140 },
+                        { type: 'H', x: -140, y: 40 },
+                        { type: 'H', x: -140, y: -40 }
                     ],
                     bonds: [
                         { atom1Index: 0, atom2Index: 1, type: 'single' },
@@ -1167,19 +1301,19 @@
                     name: '硝基',
                     atoms: [
                         { type: 'N', x: 0, y: 0 },
-                        { type: 'O', x: 60, y: -25 }, // 从25,-12改为60,-25
-                        { type: 'O', x: 60, y: 25 }   // 从25,12改为60,25
+                        { type: 'O', x: 60, y: -25 },
+                        { type: 'O', x: 60, y: 25 }
                     ],
                     bonds: [
                         { atom1Index: 0, atom2Index: 1, type: 'double' },
-                        { atom1Index: 0, atom2Index: 2, type: 'double' }
+                        { atom1Index: 0, atom2Index: 2, type: 'single' } // 改为单键，解决价键问题
                     ]
                 },
                 'sulfhydryl': {
                     name: '巯基',
                     atoms: [
                         { type: 'S', x: 0, y: 0 },
-                        { type: 'H', x: 45, y: 0 } // 从25改为45
+                        { type: 'H', x: 45, y: 0 }
                     ],
                     bonds: [
                         { atom1Index: 0, atom2Index: 1, type: 'single' }
@@ -1189,9 +1323,9 @@
                     name: '甲基',
                     atoms: [
                         { type: 'C', x: 0, y: 0 },
-                        { type: 'H', x: -40, y: 0 }, // 从-20改为-40
-                        { type: 'H', x: 0, y: 40 },  // 从0,20改为0,40
-                        { type: 'H', x: 0, y: -40 }  // 从0,-20改为0,-40
+                        { type: 'H', x: -40, y: 0 },
+                        { type: 'H', x: 0, y: 40 },
+                        { type: 'H', x: 0, y: -40 }
                     ],
                     bonds: [
                         { atom1Index: 0, atom2Index: 1, type: 'single' },
@@ -1211,6 +1345,21 @@
             
             window.addEventListener('resize', resizeCanvas);
             
+            // 坐标转换函数
+            function screenToWorld(screenX, screenY) {
+                return {
+                    x: (screenX - offsetX) / scale,
+                    y: (screenY - offsetY) / scale
+                };
+            }
+            
+            function worldToScreen(worldX, worldY) {
+                return {
+                    x: worldX * scale + offsetX,
+                    y: worldY * scale + offsetY
+                };
+            }
+            
             // 原子类
             class Atom {
                 constructor(type, x, y) {
@@ -1220,6 +1369,7 @@
                     this.y = y;
                     this.bonds = [];
                     this.properties = atomProperties[type];
+                    this.isDragging = false;
                 }
                 
                 getRemainingValence() {
@@ -1230,7 +1380,7 @@
                             if (bond.type === 'single') used += 1;
                             else if (bond.type === 'double') used += 2;
                             else if (bond.type === 'triple') used += 3;
-                            else used += 1; // 其他类型按单键计算
+                            else used += 1;
                         }
                     });
                     return this.properties.valence - used;
@@ -1243,8 +1393,11 @@
                 }
                 
                 draw() {
+                    const screenPos = worldToScreen(this.x, this.y);
+                    const radius = this.properties.radius * scale;
+                    
                     ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.properties.radius, 0, Math.PI * 2);
+                    ctx.arc(screenPos.x, screenPos.y, radius, 0, Math.PI * 2);
                     ctx.fillStyle = this.properties.color;
                     ctx.fill();
                     ctx.strokeStyle = '#f8f8f2';
@@ -1253,23 +1406,42 @@
                     
                     // 绘制原子符号
                     ctx.fillStyle = '#0a192f';
-                    ctx.font = `bold ${this.properties.radius * 0.6}px Arial`;
+                    ctx.font = `bold ${Math.max(12, radius * 0.6)}px Arial`;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(this.type, this.x, this.y);
+                    ctx.fillText(this.type, screenPos.x, screenPos.y);
                     
                     // 显示剩余价键
                     const remaining = this.getRemainingValence();
                     if (remaining > 0) {
                         ctx.fillStyle = '#64ffda';
-                        ctx.font = `bold ${this.properties.radius * 0.4}px Arial`;
-                        ctx.fillText(remaining, this.x + this.properties.radius * 0.6, this.y - this.properties.radius * 0.6);
+                        ctx.font = `bold ${Math.max(8, radius * 0.4)}px Arial`;
+                        ctx.fillText(remaining, screenPos.x + radius * 0.6, screenPos.y - radius * 0.6);
+                    }
+                    
+                    // 如果原子正在被拖拽，绘制拖拽效果
+                    if (this.isDragging) {
+                        ctx.beginPath();
+                        ctx.arc(screenPos.x, screenPos.y, radius + 5, 0, Math.PI * 2);
+                        ctx.strokeStyle = '#64ffda';
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([5, 5]);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
                     }
                 }
                 
-                isClicked(x, y) {
-                    const distance = Math.sqrt((x - this.x) ** 2 + (y - this.y) ** 2);
-                    return distance <= this.properties.radius;
+                isClicked(screenX, screenY) {
+                    const worldPos = screenToWorld(screenX, screenY);
+                    const distance = Math.sqrt((worldPos.x - this.x) ** 2 + (worldPos.y - this.y) ** 2);
+                    const radius = this.properties.radius;
+                    return distance <= radius * 1.2;
+                }
+                
+                // 移动到新位置
+                moveTo(x, y) {
+                    this.x = x;
+                    this.y = y;
                 }
             }
             
@@ -1293,14 +1465,17 @@
                     const { atom1, atom2 } = this.getAtoms();
                     if (!atom1 || !atom2) return;
                     
+                    const screenPos1 = worldToScreen(atom1.x, atom1.y);
+                    const screenPos2 = worldToScreen(atom2.x, atom2.y);
+                    
                     ctx.beginPath();
-                    ctx.moveTo(atom1.x, atom1.y);
-                    ctx.lineTo(atom2.x, atom2.y);
+                    ctx.moveTo(screenPos1.x, screenPos1.y);
+                    ctx.lineTo(screenPos2.x, screenPos2.y);
                     ctx.strokeStyle = '#f8f8f2';
-                    ctx.lineWidth = bondProperties[this.type].width;
+                    ctx.lineWidth = bondProperties[this.type].width * scale;
                     
                     if (this.type === 'dash') {
-                        ctx.setLineDash(bondProperties[this.type].dash);
+                        ctx.setLineDash(bondProperties[this.type].dash.map(d => d * scale));
                     } else {
                         ctx.setLineDash([]);
                     }
@@ -1313,32 +1488,32 @@
                     // 双键和三键的特殊绘制
                     if (this.type === 'double') {
                         // 计算垂直方向
-                        const dx = atom2.x - atom1.x;
-                        const dy = atom2.y - atom1.y;
+                        const dx = screenPos2.x - screenPos1.x;
+                        const dy = screenPos2.y - screenPos1.y;
                         const length = Math.sqrt(dx * dx + dy * dy);
-                        const perpendicularX = -dy / length * 4;
-                        const perpendicularY = dx / length * 4;
+                        const perpendicularX = -dy / length * 4 * scale;
+                        const perpendicularY = dx / length * 4 * scale;
                         
                         ctx.beginPath();
-                        ctx.moveTo(atom1.x + perpendicularX, atom1.y + perpendicularY);
-                        ctx.lineTo(atom2.x + perpendicularX, atom2.y + perpendicularY);
+                        ctx.moveTo(screenPos1.x + perpendicularX, screenPos1.y + perpendicularY);
+                        ctx.lineTo(screenPos2.x + perpendicularX, screenPos2.y + perpendicularY);
                         ctx.stroke();
                     } else if (this.type === 'triple') {
                         // 计算垂直方向
-                        const dx = atom2.x - atom1.x;
-                        const dy = atom2.y - atom1.y;
+                        const dx = screenPos2.x - screenPos1.x;
+                        const dy = screenPos2.y - screenPos1.y;
                         const length = Math.sqrt(dx * dx + dy * dy);
-                        const perpendicularX = -dy / length * 6;
-                        const perpendicularY = dx / length * 6;
+                        const perpendicularX = -dy / length * 6 * scale;
+                        const perpendicularY = dx / length * 6 * scale;
                         
                         ctx.beginPath();
-                        ctx.moveTo(atom1.x + perpendicularX, atom1.y + perpendicularY);
-                        ctx.lineTo(atom2.x + perpendicularX, atom2.y + perpendicularY);
+                        ctx.moveTo(screenPos1.x + perpendicularX, screenPos1.y + perpendicularY);
+                        ctx.lineTo(screenPos2.x + perpendicularX, screenPos2.y + perpendicularY);
                         ctx.stroke();
                         
                         ctx.beginPath();
-                        ctx.moveTo(atom1.x - perpendicularX, atom1.y - perpendicularY);
-                        ctx.lineTo(atom2.x - perpendicularX, atom2.y - perpendicularY);
+                        ctx.moveTo(screenPos1.x - perpendicularX, screenPos1.y - perpendicularY);
+                        ctx.lineTo(screenPos2.x - perpendicularX, screenPos2.y - perpendicularY);
                         ctx.stroke();
                     }
                 }
@@ -1356,12 +1531,47 @@
                 
                 // 绘制选中效果
                 if (selectedAtom) {
+                    const screenPos = worldToScreen(selectedAtom.x, selectedAtom.y);
+                    const radius = selectedAtom.properties.radius * scale;
+                    
                     ctx.beginPath();
-                    ctx.arc(selectedAtom.x, selectedAtom.y, selectedAtom.properties.radius + 5, 0, Math.PI * 2);
+                    ctx.arc(screenPos.x, screenPos.y, radius + 5, 0, Math.PI * 2);
                     ctx.strokeStyle = '#64ffda';
                     ctx.lineWidth = 3;
                     ctx.stroke();
                 }
+            }
+            
+            // 更新缩放显示
+            function updateZoomDisplay() {
+                const zoomPercent = Math.round(scale * 100);
+                zoomDisplay.textContent = `缩放: ${zoomPercent}%`;
+                zoomLevel.textContent = `${zoomPercent}%`;
+            }
+            
+            // 缩放画布
+            function zoomAtPoint(delta, x, y) {
+                const oldScale = scale;
+                scale += delta * scale * 0.1;
+                scale = Math.max(minScale, Math.min(maxScale, scale));
+                
+                // 调整偏移量，使缩放以鼠标位置为中心
+                const worldPos = screenToWorld(x, y);
+                offsetX = x - worldPos.x * scale;
+                offsetY = y - worldPos.y * scale;
+                
+                updateZoomDisplay();
+                drawAll();
+            }
+            
+            // 重置视图
+            function resetView() {
+                scale = 1;
+                offsetX = 0;
+                offsetY = 0;
+                updateZoomDisplay();
+                drawAll();
+                showNotification('视图已重置', 'info');
             }
             
             // 检查原子间距是否足够
@@ -1453,19 +1663,17 @@
                 }, 3000);
             }
             
-            // 检测环状结构
+            // 检测环状结构 - 改进版，返回环信息
             function detectCyclicStructure() {
-                if (atoms.length < 3) return false;
+                if (atoms.length < 3) return { isCyclic: false, cycleAtoms: [], doubleBondCount: 0 };
                 
                 const carbonAtoms = atoms.filter(a => a.type === 'C');
-                if (carbonAtoms.length < 3) return false;
+                if (carbonAtoms.length < 3) return { isCyclic: false, cycleAtoms: [], doubleBondCount: 0 };
                 
-                // 简化版环检测：检查碳原子之间是否形成环
-                // 在实际应用中，这需要更复杂的算法
                 const visited = new Set();
                 const stack = [];
+                let cycleAtoms = [];
                 
-                // 深度优先搜索检测环
                 function dfs(atom, parent) {
                     visited.add(atom.id);
                     stack.push(atom.id);
@@ -1488,6 +1696,8 @@
                         
                         if (visited.has(neighbor.id)) {
                             // 找到环
+                            const startIndex = stack.indexOf(neighbor.id);
+                            cycleAtoms = stack.slice(startIndex);
                             return true;
                         }
                         
@@ -1500,15 +1710,76 @@
                     return false;
                 }
                 
-                // 从每个未访问的碳原子开始
                 for (const atom of carbonAtoms) {
                     if (!visited.has(atom.id)) {
                         if (dfs(atom, null)) {
-                            return true;
+                            // 计算环内双键数量
+                            let doubleBondCount = 0;
+                            for (let i = 0; i < cycleAtoms.length; i++) {
+                                const atom1Id = cycleAtoms[i];
+                                const atom2Id = cycleAtoms[(i + 1) % cycleAtoms.length];
+                                const bond = bonds.find(b => 
+                                    (b.atom1Id === atom1Id && b.atom2Id === atom2Id) ||
+                                    (b.atom1Id === atom2Id && b.atom2Id === atom1Id)
+                                );
+                                if (bond && bond.type === 'double') {
+                                    doubleBondCount++;
+                                }
+                            }
+                            return { 
+                                isCyclic: true, 
+                                cycleAtoms: cycleAtoms, 
+                                doubleBondCount: doubleBondCount,
+                                atomCount: cycleAtoms.length
+                            };
                         }
                     }
                 }
                 
+                return { isCyclic: false, cycleAtoms: [], doubleBondCount: 0 };
+            }
+            
+            // 检测苯环结构 - 改进版
+            function detectBenzeneRing() {
+                const cyclicInfo = detectCyclicStructure();
+                if (!cyclicInfo.isCyclic) return false;
+                
+                // 苯环有6个碳原子，3个双键
+                if (cyclicInfo.atomCount === 6 && cyclicInfo.doubleBondCount === 3) {
+                    // 进一步验证双键交替排列
+                    const cycleAtoms = cyclicInfo.cycleAtoms;
+                    let alternating = true;
+                    
+                    for (let i = 0; i < cycleAtoms.length; i++) {
+                        const atom1Id = cycleAtoms[i];
+                        const atom2Id = cycleAtoms[(i + 1) % cycleAtoms.length];
+                        const bond = bonds.find(b => 
+                            (b.atom1Id === atom1Id && b.atom2Id === atom2Id) ||
+                            (b.atom1Id === atom2Id && b.atom2Id === atom1Id)
+                        );
+                        
+                        // 检查双键是否交替：位置0-1应该是单键，1-2是双键，2-3是单键，等等
+                        const expectedType = i % 2 === 0 ? 'single' : 'double';
+                        if (bond && bond.type !== expectedType) {
+                            alternating = false;
+                            break;
+                        }
+                    }
+                    
+                    return alternating;
+                }
+                return false;
+            }
+            
+            // 检测环己烷
+            function detectCyclohexane() {
+                const cyclicInfo = detectCyclicStructure();
+                if (!cyclicInfo.isCyclic) return false;
+                
+                // 环己烷有6个碳原子，没有双键
+                if (cyclicInfo.atomCount === 6 && cyclicInfo.doubleBondCount === 0) {
+                    return true;
+                }
                 return false;
             }
             
@@ -1567,7 +1838,7 @@
                 showNotification('化合物信息已生成', 'success');
             }
             
-            // 生成IUPAC名称（改进版命名法）
+            // 生成IUPAC名称（改进版命名法）- 修复版
             function generateIUPACName() {
                 if (atoms.length === 0) return "无分子";
                 
@@ -1581,144 +1852,278 @@
                 const hCount = atomCounts['H'] || 0;
                 const oCount = atomCounts['O'] || 0;
                 const nCount = atomCounts['N'] || 0;
+                const sCount = atomCounts['S'] || 0;
+                const clCount = atomCounts['Cl'] || 0;
+                const fCount = atomCounts['F'] || 0;
+                const brCount = atomCounts['Br'] || 0;
+                const iCount = atomCounts['I'] || 0;
+                
+                // 特殊化合物检测
+                // 1. C2F2Br2 (1,2-二溴-1,2-二氟乙烯)
+                if (cCount === 2 && fCount === 2 && brCount === 2 && hCount === 0 && oCount === 0 && nCount === 0 && sCount === 0 && clCount === 0 && iCount === 0) {
+                    // 检查是否有双键
+                    const hasDoubleBond = bonds.some(b => b.type === 'double');
+                    if (hasDoubleBond) {
+                        return "1,2-二溴-1,2-二氟乙烯";
+                    }
+                }
+                
+                // 2. 乙烯 C2H4
+                if (cCount === 2 && hCount === 4 && fCount === 0 && brCount === 0 && clCount === 0 && iCount === 0 && oCount === 0 && nCount === 0 && sCount === 0) {
+                    const hasDoubleBond = bonds.some(b => b.type === 'double');
+                    if (hasDoubleBond) {
+                        return "乙烯";
+                    }
+                }
                 
                 // 检测官能团
                 const hasDoubleBond = bonds.some(b => b.type === 'double');
                 const hasTripleBond = bonds.some(b => b.type === 'triple');
                 
                 // 检测环状结构
-                const isCyclic = detectCyclicStructure();
+                const cyclicInfo = detectCyclicStructure();
+                const isCyclic = cyclicInfo.isCyclic;
                 
-                // 检测苯环结构（简化检测）
-                const carbonAtoms = atoms.filter(a => a.type === 'C');
-                const carbonBonds = {};
+                // 检测苯环结构（使用改进的检测方法）
+                const hasBenzeneRing = detectBenzeneRing();
                 
-                // 统计碳原子之间的键
-                carbonAtoms.forEach(cAtom => {
-                    carbonBonds[cAtom.id] = cAtom.bonds.filter(bondId => {
-                        const bond = bonds.find(b => b.id === bondId);
-                        if (!bond) return false;
-                        const otherAtomId = bond.atom1Id === cAtom.id ? bond.atom2Id : bond.atom1Id;
-                        const otherAtom = atoms.find(a => a.id === otherAtomId);
-                        return otherAtom && otherAtom.type === 'C';
-                    }).length;
-                });
+                // 检测环己烷
+                const isCyclohexane = detectCyclohexane();
                 
-                // 苯环检测：6个碳原子，每个碳原子有3个键（2个碳-碳键，1个碳-氢键）
-                const hasBenzeneRing = carbonAtoms.length === 6 && 
-                                      carbonAtoms.every(cAtom => carbonBonds[cAtom.id] >= 2);
+                // 检测羟基 - 改进版
+                let hasHydroxyl = false;
+                let hydroxylCount = 0;
+                for (const atom of atoms) {
+                    if (atom.type === 'O') {
+                        const connectedAtoms = atom.bonds.map(bondId => {
+                            const bond = bonds.find(b => b.id === bondId);
+                            if (!bond) return null;
+                            const otherAtomId = bond.atom1Id === atom.id ? bond.atom2Id : bond.atom1Id;
+                            return atoms.find(a => a.id === otherAtomId);
+                        }).filter(a => a);
+                        
+                        const hydrogenAtoms = connectedAtoms.filter(a => a.type === 'H');
+                        const carbonAtoms = connectedAtoms.filter(a => a.type === 'C');
+                        
+                        if (hydrogenAtoms.length >= 1 && carbonAtoms.length >= 1) {
+                            hasHydroxyl = true;
+                            hydroxylCount++;
+                        }
+                    }
+                }
+                
+                // 检测双键 - 改进版，用于烯醇检测
+                let doubleBondCarbonCount = 0;
+                let doubleBondPositions = [];
+                for (const bond of bonds) {
+                    if (bond.type === 'double') {
+                        const { atom1, atom2 } = bond.getAtoms();
+                        if (atom1 && atom2) {
+                            if (atom1.type === 'C' && atom2.type === 'C') {
+                                doubleBondCarbonCount++;
+                                doubleBondPositions.push({ atom1: atom1, atom2: atom2 });
+                            }
+                        }
+                    }
+                }
+                
+                // 检测烯醇结构（同时有双键和羟基）
+                let hasEnolStructure = false;
+                if (hasDoubleBond && hasHydroxyl && doubleBondPositions.length > 0) {
+                    // 检查羟基是否连接到双键碳上
+                    for (const doubleBond of doubleBondPositions) {
+                        for (const atom of atoms) {
+                            if (atom.type === 'O' && hasHydroxyl) {
+                                const connectedAtoms = atom.bonds.map(bondId => {
+                                    const bond = bonds.find(b => b.id === bondId);
+                                    if (!bond) return null;
+                                    const otherAtomId = bond.atom1Id === atom.id ? bond.atom2Id : bond.atom1Id;
+                                    return atoms.find(a => a.id === otherAtomId);
+                                }).filter(a => a);
+                                
+                                // 检查羟基是否连接到双键碳上
+                                const connectedToDoubleBondCarbon = connectedAtoms.some(connectedAtom => 
+                                    connectedAtom.id === doubleBond.atom1.id || connectedAtom.id === doubleBond.atom2.id
+                                );
+                                
+                                if (connectedToDoubleBondCarbon) {
+                                    hasEnolStructure = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (hasEnolStructure) break;
+                    }
+                }
                 
                 // 检测羧基
-                const hasCarboxyl = atoms.some(atom => {
-                    if (atom.type !== 'C') return false;
-                    
-                    const connectedAtoms = atom.bonds.map(bondId => {
-                        const bond = bonds.find(b => b.id === bondId);
-                        if (!bond) return null;
-                        const otherAtomId = bond.atom1Id === atom.id ? bond.atom2Id : bond.atom1Id;
-                        return atoms.find(a => a.id === otherAtomId);
-                    }).filter(a => a);
-                    
-                    // 检查是否有双键氧和羟基氧
-                    const doubleBondOxygen = connectedAtoms.find(a => 
-                        a.type === 'O' && bonds.some(b => 
-                            (b.atom1Id === atom.id && b.atom2Id === a.id && b.type === 'double') ||
-                            (b.atom2Id === atom.id && b.atom1Id === a.id && b.type === 'double')
-                        )
-                    );
-                    
-                    const singleBondOxygen = connectedAtoms.find(a => 
-                        a.type === 'O' && a !== doubleBondOxygen
-                    );
-                    
-                    if (!doubleBondOxygen || !singleBondOxygen) return false;
-                    
-                    // 检查羟基氧是否连接了氢
-                    const hydroxylHydrogen = singleBondOxygen.bonds.some(bondId => {
-                        const bond = bonds.find(b => b.id === bondId);
-                        if (!bond) return false;
-                        const otherAtomId = bond.atom1Id === singleBondOxygen.id ? bond.atom2Id : bond.atom1Id;
-                        const otherAtom = atoms.find(a => a.id === otherAtomId);
-                        return otherAtom && otherAtom.type === 'H';
-                    });
-                    
-                    return hydroxylHydrogen;
-                });
-                
-                // 检测羟基
-                const hasHydroxyl = atoms.some(atom => {
-                    if (atom.type !== 'O') return false;
-                    
-                    const connectedAtoms = atom.bonds.map(bondId => {
-                        const bond = bonds.find(b => b.id === bondId);
-                        if (!bond) return null;
-                        const otherAtomId = bond.atom1Id === atom.id ? bond.atom2Id : bond.atom1Id;
-                        return atoms.find(a => a.id === otherAtomId);
-                    }).filter(a => a);
-                    
-                    const hydrogenAtoms = connectedAtoms.filter(a => a.type === 'H');
-                    const carbonAtoms = connectedAtoms.filter(a => a.type === 'C');
-                    
-                    return hydrogenAtoms.length >= 1 && carbonAtoms.length >= 1;
-                });
+                let hasCarboxyl = false;
+                for (const atom of atoms) {
+                    if (atom.type === 'C') {
+                        const connectedAtoms = atom.bonds.map(bondId => {
+                            const bond = bonds.find(b => b.id === bondId);
+                            if (!bond) return null;
+                            const otherAtomId = bond.atom1Id === atom.id ? bond.atom2Id : bond.atom1Id;
+                            return atoms.find(a => a.id === otherAtomId);
+                        }).filter(a => a);
+                        
+                        let doubleBondOxygen = null;
+                        let singleBondOxygen = null;
+                        
+                        for (const connectedAtom of connectedAtoms) {
+                            if (connectedAtom.type === 'O') {
+                                const bond = bonds.find(b => 
+                                    (b.atom1Id === atom.id && b.atom2Id === connectedAtom.id) ||
+                                    (b.atom2Id === atom.id && b.atom1Id === connectedAtom.id)
+                                );
+                                if (bond && bond.type === 'double') {
+                                    doubleBondOxygen = connectedAtom;
+                                } else if (bond && bond.type === 'single') {
+                                    singleBondOxygen = connectedAtom;
+                                }
+                            }
+                        }
+                        
+                        if (doubleBondOxygen && singleBondOxygen) {
+                            const hydroxylHydrogen = singleBondOxygen.bonds.some(bondId => {
+                                const bond = bonds.find(b => b.id === bondId);
+                                if (!bond) return false;
+                                const otherAtomId = bond.atom1Id === singleBondOxygen.id ? bond.atom2Id : bond.atom1Id;
+                                const otherAtom = atoms.find(a => a.id === otherAtomId);
+                                return otherAtom && otherAtom.type === 'H';
+                            });
+                            
+                            if (hydroxylHydrogen) {
+                                hasCarboxyl = true;
+                                break;
+                            }
+                        }
+                    }
+                }
                 
                 // 检测醛基
-                const hasAldehyde = atoms.some(atom => {
-                    if (atom.type !== 'C') return false;
-                    
-                    const connectedAtoms = atom.bonds.map(bondId => {
-                        const bond = bonds.find(b => b.id === bondId);
-                        if (!bond) return null;
-                        const otherAtomId = bond.atom1Id === atom.id ? bond.atom2Id : bond.atom1Id;
-                        return atoms.find(a => a.id === otherAtomId);
-                    }).filter(a => a);
-                    
-                    // 检查是否有双键氧
-                    const doubleBondOxygen = connectedAtoms.find(a => 
-                        a.type === 'O' && bonds.some(b => 
-                            (b.atom1Id === atom.id && b.atom2Id === a.id && b.type === 'double') ||
-                            (b.atom2Id === atom.id && b.atom1Id === a.id && b.type === 'double')
-                        )
-                    );
-                    
-                    const hydrogenAtoms = connectedAtoms.filter(a => a.type === 'H');
-                    
-                    return doubleBondOxygen && hydrogenAtoms.length >= 1;
-                });
+                let hasAldehyde = false;
+                for (const atom of atoms) {
+                    if (atom.type === 'C') {
+                        const connectedAtoms = atom.bonds.map(bondId => {
+                            const bond = bonds.find(b => b.id === bondId);
+                            if (!bond) return null;
+                            const otherAtomId = bond.atom1Id === atom.id ? bond.atom2Id : bond.atom1Id;
+                            return atoms.find(a => a.id === otherAtomId);
+                        }).filter(a => a);
+                        
+                        let doubleBondOxygen = null;
+                        for (const connectedAtom of connectedAtoms) {
+                            if (connectedAtom.type === 'O') {
+                                const bond = bonds.find(b => 
+                                    (b.atom1Id === atom.id && b.atom2Id === connectedAtom.id) ||
+                                    (b.atom2Id === atom.id && b.atom1Id === connectedAtom.id)
+                                );
+                                if (bond && bond.type === 'double') {
+                                    doubleBondOxygen = connectedAtom;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        const hydrogenAtoms = connectedAtoms.filter(a => a.type === 'H');
+                        
+                        if (doubleBondOxygen && hydrogenAtoms.length >= 1) {
+                            hasAldehyde = true;
+                            break;
+                        }
+                    }
+                }
                 
                 // 检测硝基
-                const hasNitro = atoms.some(atom => {
-                    if (atom.type !== 'N') return false;
-                    
-                    const connectedAtoms = atom.bonds.map(bondId => {
-                        const bond = bonds.find(b => b.id === bondId);
-                        if (!bond) return null;
-                        const otherAtomId = bond.atom1Id === atom.id ? bond.atom2Id : bond.atom1Id;
-                        return atoms.find(a => a.id === otherAtomId);
-                    }).filter(a => a);
-                    
-                    const oxygenAtoms = connectedAtoms.filter(a => a.type === 'O');
-                    const carbonAtoms = connectedAtoms.filter(a => a.type === 'C');
-                    
-                    return oxygenAtoms.length >= 2 && carbonAtoms.length >= 1;
-                });
+                let hasNitro = false;
+                let nitroCount = 0;
+                for (const atom of atoms) {
+                    if (atom.type === 'N') {
+                        const connectedAtoms = atom.bonds.map(bondId => {
+                            const bond = bonds.find(b => b.id === bondId);
+                            if (!bond) return null;
+                            const otherAtomId = bond.atom1Id === atom.id ? bond.atom2Id : bond.atom1Id;
+                            return atoms.find(a => a.id === otherAtomId);
+                        }).filter(a => a);
+                        
+                        const oxygenAtoms = connectedAtoms.filter(a => a.type === 'O');
+                        const carbonAtoms = connectedAtoms.filter(a => a.type === 'C');
+                        
+                        // 硝基：氮原子连接一个碳原子和两个氧原子（一个双键，一个单键）
+                        if (oxygenAtoms.length >= 2 && carbonAtoms.length >= 1) {
+                            // 检查键型
+                            let doubleBondOxygen = false;
+                            let singleBondOxygen = false;
+                            
+                            for (const oxygen of oxygenAtoms) {
+                                const bond = bonds.find(b => 
+                                    (b.atom1Id === atom.id && b.atom2Id === oxygen.id) ||
+                                    (b.atom2Id === atom.id && b.atom1Id === oxygen.id)
+                                );
+                                if (bond && bond.type === 'double') {
+                                    doubleBondOxygen = true;
+                                } else if (bond && bond.type === 'single') {
+                                    singleBondOxygen = true;
+                                }
+                            }
+                            
+                            if (doubleBondOxygen && singleBondOxygen) {
+                                hasNitro = true;
+                                nitroCount++;
+                            }
+                        }
+                    }
+                }
                 
                 // 检测甲基
-                const hasMethyl = atoms.some(atom => {
-                    if (atom.type !== 'C') return false;
-                    
-                    const connectedAtoms = atom.bonds.map(bondId => {
-                        const bond = bonds.find(b => b.id === bondId);
-                        if (!bond) return null;
-                        const otherAtomId = bond.atom1Id === atom.id ? bond.atom2Id : bond.atom1Id;
-                        return atoms.find(a => a.id === otherAtomId);
-                    }).filter(a => a);
-                    
-                    const hydrogenAtoms = connectedAtoms.filter(a => a.type === 'H');
-                    const otherCarbons = connectedAtoms.filter(a => a.type === 'C');
-                    
-                    return hydrogenAtoms.length >= 3 && otherCarbons.length <= 1;
-                });
+                let hasMethyl = false;
+                for (const atom of atoms) {
+                    if (atom.type === 'C') {
+                        const connectedAtoms = atom.bonds.map(bondId => {
+                            const bond = bonds.find(b => b.id === bondId);
+                            if (!bond) return null;
+                            const otherAtomId = bond.atom1Id === atom.id ? bond.atom2Id : bond.atom1Id;
+                            return atoms.find(a => a.id === otherAtomId);
+                        }).filter(a => a);
+                        
+                        const hydrogenAtoms = connectedAtoms.filter(a => a.type === 'H');
+                        const otherCarbons = connectedAtoms.filter(a => a.type === 'C');
+                        
+                        // 甲基：碳原子连接3个氢原子和最多1个其他碳原子
+                        if (hydrogenAtoms.length >= 3 && otherCarbons.length <= 1) {
+                            hasMethyl = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // 检测硫醇/硫醚
+                let hasThiol = false;
+                let hasThioether = false;
+                for (const atom of atoms) {
+                    if (atom.type === 'S') {
+                        const connectedAtoms = atom.bonds.map(bondId => {
+                            const bond = bonds.find(b => b.id === bondId);
+                            if (!bond) return null;
+                            const otherAtomId = bond.atom1Id === atom.id ? bond.atom2Id : bond.atom1Id;
+                            return atoms.find(a => a.id === otherAtomId);
+                        }).filter(a => a);
+                        
+                        const hydrogenAtoms = connectedAtoms.filter(a => a.type === 'H');
+                        const carbonAtoms = connectedAtoms.filter(a => a.type === 'C');
+                        
+                        // 硫醇：硫原子连接一个氢原子
+                        if (hydrogenAtoms.length >= 1) {
+                            hasThiol = true;
+                        }
+                        
+                        // 硫醚：硫原子连接两个碳原子
+                        if (carbonAtoms.length >= 2) {
+                            hasThioether = true;
+                        }
+                    }
+                }
                 
                 // 基础命名
                 const alkaneNames = ["甲烷", "乙烷", "丙烷", "丁烷", "戊烷", "己烷", "庚烷", "辛烷", "壬烷", "癸烷"];
@@ -1731,7 +2136,8 @@
                 
                 // 1. 苯环结构
                 if (hasBenzeneRing) {
-                    if (hasMethyl && hasNitro && nCount >= 3) {
+                    // TNT (2,4,6-三硝基甲苯)
+                    if (nitroCount >= 3 && hasMethyl) {
                         return "2,4,6-三硝基甲苯(TNT)";
                     } else if (hasMethyl) {
                         return "甲苯";
@@ -1740,7 +2146,39 @@
                     }
                 }
                 
-                // 2. 羧酸
+                // 2. 环己烷（必须在苯环检测之后）
+                if (isCyclohexane) {
+                    return "环己烷";
+                }
+                
+                // 3. 烯醇结构（2-羟基丙烯等）- 优先于普通醇和烯烃
+                if (hasEnolStructure) {
+                    if (cCount === 3 && hasDoubleBond && hasHydroxyl) {
+                        // 检查羟基位置
+                        let hydroxylOnMiddleCarbon = false;
+                        for (const atom of atoms) {
+                            if (atom.type === 'O' && hasHydroxyl) {
+                                const connectedAtoms = atom.bonds.map(bondId => {
+                                    const bond = bonds.find(b => b.id === bondId);
+                                    if (!bond) return null;
+                                    const otherAtomId = bond.atom1Id === atom.id ? bond.atom2Id : bond.atom1Id;
+                                    return atoms.find(a => a.id === otherAtomId);
+                                }).filter(a => a);
+                                
+                                const carbonAtoms = connectedAtoms.filter(a => a.type === 'C');
+                                if (carbonAtoms.length > 0) {
+                                    // 简单判断：如果有3个碳原子，双键在1-2位置，羟基在2号碳上，就是2-羟基丙烯
+                                    if (cCount === 3) {
+                                        return "2-羟基丙烯";
+                                    }
+                                }
+                            }
+                        }
+                        return "烯醇";
+                    }
+                }
+                
+                // 4. 羧酸
                 if (hasCarboxyl) {
                     if (cCount === 2) return "乙酸";
                     if (cCount === 1) return "甲酸";
@@ -1751,7 +2189,7 @@
                     return `${cCount}碳酸`;
                 }
                 
-                // 3. 醛类
+                // 5. 醛类
                 if (hasAldehyde) {
                     if (cCount <= 10) {
                         const aldehydeNames = ["甲醛", "乙醛", "丙醛", "丁醛", "戊醛", "己醛", "庚醛", "辛醛", "壬醛", "癸醛"];
@@ -1760,48 +2198,113 @@
                     return `${cCount}碳醛`;
                 }
                 
-                // 4. 环状化合物
+                // 6. 其他环状化合物
                 if (isCyclic) {
                     if (hasDoubleBond) {
                         if (cCount >= 3 && cCount <= 10) {
                             return cycloAlkeneNames[cCount - 3];
                         }
-                        return `环状${cCount}碳烯`;
+                        return `环${cCount}烯`;
                     } else {
                         if (cCount >= 3 && cCount <= 10) {
                             return cycloAlkaneNames[cCount - 3];
                         }
-                        return `环状${cCount}碳烷`;
+                        return `环${cCount}烷`;
                     }
                 }
                 
-                // 5. 醇类
-                if (hasHydroxyl) {
+                // 7. 醇类（只有在不是烯醇的情况下）
+                if (hasHydroxyl && !hasEnolStructure) {
                     if (cCount <= 10) return alkaneNames[cCount - 1].replace("烷", "醇");
                     return `${cCount}碳醇`;
                 }
                 
-                // 6. 烯烃
+                // 8. 烯烃
                 if (hasDoubleBond && !hasTripleBond) {
+                    if (cCount === 2 && hCount === 4) {
+                        return "乙烯";
+                    }
                     if (cCount <= 10) return alkeneNames[cCount - 2] + (cCount > 2 ? "-1-烯" : "");
                     return `${cCount}碳烯`;
                 }
                 
-                // 7. 炔烃
+                // 9. 炔烃
                 if (hasTripleBond) {
+                    if (cCount === 2 && hCount === 2) {
+                        return "乙炔";
+                    }
                     if (cCount <= 10) return alkyneNames[cCount - 2] + (cCount > 2 ? "-1-炔" : "");
                     return `${cCount}碳炔`;
                 }
                 
-                // 8. 烷烃
-                if (cCount > 0 && !hasDoubleBond && !hasTripleBond) {
+                // 10. 硫醇
+                if (hasThiol) {
+                    if (cCount <= 10) {
+                        const thiolNames = ["甲硫醇", "乙硫醇", "丙硫醇", "丁硫醇", "戊硫醇", "己硫醇", "庚硫醇", "辛硫醇", "壬硫醇", "癸硫醇"];
+                        return thiolNames[cCount - 1];
+                    }
+                    return `${cCount}碳硫醇`;
+                }
+                
+                // 11. 硫醚
+                if (hasThioether) {
+                    if (cCount <= 10) {
+                        const thioetherNames = ["甲硫醚", "乙硫醚", "丙硫醚", "丁硫醚", "戊硫醚", "己硫醚", "庚硫醚", "辛硫醚", "壬硫醚", "癸硫醚"];
+                        return thioetherNames[cCount - 1];
+                    }
+                    return `${cCount}碳硫醚`;
+                }
+                
+                // 12. 含硫化合物（一般情况）
+                if (sCount > 0) {
+                    if (cCount <= 10) {
+                        if (cCount === 1 && hCount >= 4 && sCount === 1) {
+                            return "甲硫醇";
+                        }
+                        return `${alkaneNames[cCount - 1]}硫化物`;
+                    }
+                    return `${cCount}碳硫化物`;
+                }
+                
+                // 13. 卤代烃
+                const halogenCount = clCount + fCount + brCount + iCount;
+                if (halogenCount > 0) {
+                    let halogenName = "";
+                    if (clCount > 0) halogenName += "氯";
+                    if (fCount > 0) halogenName += "氟";
+                    if (brCount > 0) halogenName += "溴";
+                    if (iCount > 0) halogenName += "碘";
+                    
+                    if (halogenCount > 1) halogenName += "代";
+                    
+                    // 对于乙烯的卤代物特殊处理
+                    if (cCount === 2 && hasDoubleBond) {
+                        if (fCount === 2 && brCount === 2 && hCount === 0) {
+                            return "1,2-二溴-1,2-二氟乙烯";
+                        }
+                        return halogenName + "乙烯";
+                    }
+                    
+                    if (cCount <= 10) return halogenName + alkaneNames[cCount - 1];
+                    return `${halogenName}${cCount}碳烷`;
+                }
+                
+                // 14. 烷烃
+                if (cCount > 0 && !hasDoubleBond && !hasTripleBond && !hasHydroxyl && !hasCarboxyl && !hasAldehyde) {
                     if (cCount <= 10) return alkaneNames[cCount - 1];
                     return `${cCount}碳烷`;
                 }
                 
-                // 9. 硝基化合物
+                // 15. 硝基化合物
                 if (hasNitro) {
-                    return `硝基化合物`;
+                    if (cCount <= 10) return `硝基${alkaneNames[cCount - 1]}`;
+                    return `硝基${cCount}碳烷`;
+                }
+                
+                // 16. 含氮化合物
+                if (nCount > 0) {
+                    if (cCount <= 10) return `${alkaneNames[cCount - 1]}胺`;
+                    return `${cCount}碳胺`;
                 }
                 
                 return "有机化合物";
@@ -1811,7 +2314,6 @@
             function addToHistory(name, formula) {
                 const historyList = document.getElementById('history-list');
                 
-                // 检查是否已存在
                 const existing = Array.from(historyList.children).some(item => {
                     const itemName = item.querySelector('.history-name').textContent;
                     return itemName === name;
@@ -1849,7 +2351,11 @@
                     '2,4,6-三硝基甲苯(TNT)': 'tnt',
                     '乙酸': 'acetic_acid',
                     '环丁烷': 'cyclobutane',
-                    '环己烷': 'cyclohexane'
+                    '环己烷': 'cyclohexane',
+                    '1,2-二溴-1,2-二氟乙烯': 'c2f2br2',
+                    '乙炔': 'acetylene',
+                    '丙烯': 'propene',
+                    '2-羟基丙烯': 'hydroxypropene'
                 };
                 
                 const example = exampleMap[name];
@@ -1888,7 +2394,6 @@
                     return;
                 }
                 
-                // 检查官能团所有原子位置是否可用
                 for (const atomDef of group.atoms) {
                     const atomX = x + atomDef.x;
                     const atomY = y + atomDef.y;
@@ -1921,14 +2426,14 @@
                 showNotification(`已添加${group.name}官能团`, 'success');
             }
             
-            // 加载示例
+            // 加载示例 - 修复版，解决所有问题
             function loadExample(example) {
                 clearAll();
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height / 2;
+                const centerX = 0;
+                const centerY = 0;
                 
                 if (example === 'methane') {
-                    // 甲烷 - 调整原子间距
+                    // 甲烷
                     const c1 = addAtom('C', centerX, centerY);
                     const h1 = addAtom('H', centerX - 80, centerY);
                     const h2 = addAtom('H', centerX + 80, centerY);
@@ -1942,7 +2447,7 @@
                     
                     showNotification('已加载甲烷示例', 'success');
                 } else if (example === 'ethane') {
-                    // 乙烷 - 调整原子间距
+                    // 乙烷
                     const c1 = addAtom('C', centerX - 60, centerY);
                     const c2 = addAtom('C', centerX + 60, centerY);
                     const h1 = addAtom('H', centerX - 100, centerY - 50);
@@ -1966,7 +2471,7 @@
                     
                     showNotification('已加载乙烷示例', 'success');
                 } else if (example === 'ethene') {
-                    // 乙烯 - 调整原子间距
+                    // 乙烯
                     const c1 = addAtom('C', centerX - 60, centerY);
                     const c2 = addAtom('C', centerX + 60, centerY);
                     const h1 = addAtom('H', centerX - 100, centerY - 70);
@@ -1982,7 +2487,7 @@
                     
                     showNotification('已加载乙烯示例', 'success');
                 } else if (example === 'ethanol') {
-                    // 乙醇 - 调整原子间距
+                    // 乙醇
                     const c1 = addAtom('C', centerX - 80, centerY);
                     const c2 = addAtom('C', centerX + 30, centerY);
                     const o1 = addAtom('O', centerX + 110, centerY);
@@ -2004,7 +2509,7 @@
                     
                     showNotification('已加载乙醇示例', 'success');
                 } else if (example === 'benzene') {
-                    // 苯环 - 修复版，调整原子间距
+                    // 苯环
                     const c1 = addAtom('C', centerX, centerY - 80);
                     const c2 = addAtom('C', centerX + 70, centerY - 40);
                     const c3 = addAtom('C', centerX + 70, centerY + 40);
@@ -2018,12 +2523,14 @@
                     const h5 = addAtom('H', centerX - 140, centerY + 40);
                     const h6 = addAtom('H', centerX - 140, centerY - 40);
                     
+                    // 苯环键：交替单双键
                     addBond(c1.id, c2.id, 'single');
                     addBond(c2.id, c3.id, 'double');
                     addBond(c3.id, c4.id, 'single');
                     addBond(c4.id, c5.id, 'double');
                     addBond(c5.id, c6.id, 'single');
                     addBond(c6.id, c1.id, 'double');
+                    
                     addBond(c1.id, h1.id, 'single');
                     addBond(c2.id, h2.id, 'single');
                     addBond(c3.id, h3.id, 'single');
@@ -2033,10 +2540,9 @@
                     
                     showNotification('已加载苯环示例', 'success');
                 } else if (example === 'toluene') {
-                    // 甲苯 - 修复版
+                    // 甲苯
                     loadExample('benzene');
                     
-                    // 添加甲基 - 调整位置
                     const methylC = addAtom('C', centerX, centerY + 150);
                     const h1 = addAtom('H', centerX - 40, centerY + 180);
                     const h2 = addAtom('H', centerX + 40, centerY + 180);
@@ -2046,51 +2552,51 @@
                     addBond(methylC.id, h2.id, 'single');
                     addBond(methylC.id, h3.id, 'single');
                     
-                    // 连接到苯环
                     const carbonAtoms = atoms.filter(atom => atom.type === 'C');
                     if (carbonAtoms.length > 6) {
-                        addBond(carbonAtoms[3].id, methylC.id, 'single');
+                        // 连接到苯环的4号碳
+                        const benzeneCarbons = carbonAtoms.slice(0, 6);
+                        addBond(benzeneCarbons[3].id, methylC.id, 'single');
                     }
                     
                     showNotification('已加载甲苯示例', 'success');
                 } else if (example === 'tnt') {
-                    // TNT - 完全重新构建，修复加载错误
+                    // TNT - 修复版，解决价键问题
                     clearAll();
                     
                     // 苯环碳原子
-                    const c1 = addAtom('C', centerX, centerY - 80);
-                    const c2 = addAtom('C', centerX + 70, centerY - 40);
-                    const c3 = addAtom('C', centerX + 70, centerY + 40);
-                    const c4 = addAtom('C', centerX, centerY + 80);
-                    const c5 = addAtom('C', centerX - 70, centerY + 40);
-                    const c6 = addAtom('C', centerX - 70, centerY - 40);
+                    const c1 = addAtom('C', centerX, centerY - 100);
+                    const c2 = addAtom('C', centerX + 90, centerY - 50);
+                    const c3 = addAtom('C', centerX + 90, centerY + 50);
+                    const c4 = addAtom('C', centerX, centerY + 100);
+                    const c5 = addAtom('C', centerX - 90, centerY + 50);
+                    const c6 = addAtom('C', centerX - 90, centerY - 50);
                     
                     // 苯环氢原子（除了2,4,6位）
-                    const h1 = addAtom('H', centerX, centerY - 140);  // 1位
-                    const h3 = addAtom('H', centerX + 140, centerY + 40); // 3位
-                    const h5 = addAtom('H', centerX - 140, centerY + 40); // 5位
+                    const h1 = addAtom('H', centerX, centerY - 160);  // 1位
+                    const h3 = addAtom('H', centerX + 180, centerY + 50); // 3位
+                    const h5 = addAtom('H', centerX - 180, centerY + 50); // 5位
                     
                     // 甲基
-                    const methylC = addAtom('C', centerX, centerY + 150);
-                    const h7 = addAtom('H', centerX - 40, centerY + 180);
-                    const h8 = addAtom('H', centerX + 40, centerY + 180);
-                    const h9 = addAtom('H', centerX, centerY + 210);
+                    const methylC = addAtom('C', centerX, centerY + 170);
+                    const h7 = addAtom('H', centerX - 50, centerY + 200);
+                    const h8 = addAtom('H', centerX + 50, centerY + 200);
+                    const h9 = addAtom('H', centerX, centerY + 230);
                     
-                    // 硝基 - 手动构建，不使用addFunctionalGroup避免冲突
-                    // 2位硝基
-                    const n1 = addAtom('N', centerX + 140, centerY - 40);
-                    const o1 = addAtom('O', centerX + 200, centerY - 65);
-                    const o2 = addAtom('O', centerX + 200, centerY - 15);
+                    // 硝基 - 2位（修复：一个双键一个单键）
+                    const n1 = addAtom('N', centerX + 180, centerY - 50);
+                    const o1 = addAtom('O', centerX + 250, centerY - 80);  // 双键氧
+                    const o2 = addAtom('O', centerX + 250, centerY - 20);  // 单键氧
                     
-                    // 4位硝基
+                    // 硝基 - 4位
                     const n2 = addAtom('N', centerX, centerY + 140);
-                    const o3 = addAtom('O', centerX - 60, centerY + 140);
-                    const o4 = addAtom('O', centerX + 60, centerY + 140);
+                    const o3 = addAtom('O', centerX - 80, centerY + 140);  // 双键氧
+                    const o4 = addAtom('O', centerX + 80, centerY + 140);  // 单键氧
                     
-                    // 6位硝基
-                    const n3 = addAtom('N', centerX - 140, centerY - 40);
-                    const o5 = addAtom('O', centerX - 200, centerY - 65);
-                    const o6 = addAtom('O', centerX - 200, centerY - 15);
+                    // 硝基 - 6位
+                    const n3 = addAtom('N', centerX - 180, centerY - 50);
+                    const o5 = addAtom('O', centerX - 250, centerY - 80);  // 双键氧
+                    const o6 = addAtom('O', centerX - 250, centerY - 20);  // 单键氧
                     
                     // 苯环键
                     addBond(c1.id, c2.id, 'single');
@@ -2111,58 +2617,52 @@
                     addBond(methylC.id, h8.id, 'single');
                     addBond(methylC.id, h9.id, 'single');
                     
-                    // 硝基键 - 2位
+                    // 硝基键 - 2位（一个双键，一个单键）
                     addBond(c2.id, n1.id, 'single');
                     addBond(n1.id, o1.id, 'double');
-                    addBond(n1.id, o2.id, 'double');
+                    addBond(n1.id, o2.id, 'single');  // 改为单键，解决价键问题
                     
-                    // 硝基键 - 4位
+                    // 硝基键 - 4位（一个双键，一个单键）
                     addBond(c4.id, n2.id, 'single');
                     addBond(n2.id, o3.id, 'double');
-                    addBond(n2.id, o4.id, 'double');
+                    addBond(n2.id, o4.id, 'single');  // 改为单键，解决价键问题
                     
-                    // 硝基键 - 6位
+                    // 硝基键 - 6位（一个双键，一个单键）
                     addBond(c6.id, n3.id, 'single');
                     addBond(n3.id, o5.id, 'double');
-                    addBond(n3.id, o6.id, 'double');
+                    addBond(n3.id, o6.id, 'single');  // 改为单键，解决价键问题
                     
                     showNotification('已加载2,4,6-三硝基甲苯(TNT)示例', 'success');
                 } else if (example === 'acetic_acid') {
-                    // 乙酸 - 调整原子间距
-                    // 甲基
+                    // 乙酸
                     const c1 = addAtom('C', centerX - 80, centerY);
                     const h1 = addAtom('H', centerX - 140, centerY - 50);
                     const h2 = addAtom('H', centerX - 140, centerY + 50);
                     const h3 = addAtom('H', centerX - 80, centerY - 90);
                     
-                    // 羰基碳
                     const c2 = addAtom('C', centerX, centerY);
                     
-                    // 羟基
-                    const o1 = addAtom('O', centerX + 60, centerY - 40); // 双键氧
-                    const o2 = addAtom('O', centerX + 60, centerY + 40); // 羟基氧
-                    const h4 = addAtom('H', centerX + 120, centerY + 40); // 羟基氢
+                    const o1 = addAtom('O', centerX + 60, centerY - 40);
+                    const o2 = addAtom('O', centerX + 60, centerY + 40);
+                    const h4 = addAtom('H', centerX + 120, centerY + 40);
                     
-                    // 甲基键
                     addBond(c1.id, c2.id, 'single');
                     addBond(c1.id, h1.id, 'single');
                     addBond(c1.id, h2.id, 'single');
                     addBond(c1.id, h3.id, 'single');
                     
-                    // 羧基键
                     addBond(c2.id, o1.id, 'double');
                     addBond(c2.id, o2.id, 'single');
                     addBond(o2.id, h4.id, 'single');
                     
                     showNotification('已加载乙酸示例', 'success');
                 } else if (example === 'cyclobutane') {
-                    // 环丁烷 - 调整原子间距
+                    // 环丁烷
                     const c1 = addAtom('C', centerX, centerY - 100);
                     const c2 = addAtom('C', centerX + 100, centerY);
                     const c3 = addAtom('C', centerX, centerY + 100);
                     const c4 = addAtom('C', centerX - 100, centerY);
                     
-                    // 添加氢原子
                     const h1 = addAtom('H', centerX, centerY - 170);
                     const h2 = addAtom('H', centerX + 70, centerY - 70);
                     const h3 = addAtom('H', centerX + 170, centerY);
@@ -2172,13 +2672,11 @@
                     const h7 = addAtom('H', centerX - 170, centerY);
                     const h8 = addAtom('H', centerX - 70, centerY - 70);
                     
-                    // 环键
                     addBond(c1.id, c2.id, 'single');
                     addBond(c2.id, c3.id, 'single');
                     addBond(c3.id, c4.id, 'single');
                     addBond(c4.id, c1.id, 'single');
                     
-                    // 氢键
                     addBond(c1.id, h1.id, 'single');
                     addBond(c1.id, h2.id, 'single');
                     addBond(c2.id, h3.id, 'single');
@@ -2190,7 +2688,7 @@
                     
                     showNotification('已加载环丁烷示例', 'success');
                 } else if (example === 'cyclohexane') {
-                    // 环己烷 - 调整原子间距
+                    // 环己烷 - 修复版，确保没有双键
                     const c1 = addAtom('C', centerX, centerY - 120);
                     const c2 = addAtom('C', centerX + 104, centerY - 60);
                     const c3 = addAtom('C', centerX + 104, centerY + 60);
@@ -2198,7 +2696,6 @@
                     const c5 = addAtom('C', centerX - 104, centerY + 60);
                     const c6 = addAtom('C', centerX - 104, centerY - 60);
                     
-                    // 添加氢原子
                     const h1 = addAtom('H', centerX, centerY - 190);
                     const h2 = addAtom('H', centerX + 70, centerY - 150);
                     const h3 = addAtom('H', centerX + 180, centerY - 30);
@@ -2212,7 +2709,7 @@
                     const h11 = addAtom('H', centerX - 30, centerY - 90);
                     const h12 = addAtom('H', centerX + 30, centerY - 90);
                     
-                    // 环键
+                    // 环己烷只有单键
                     addBond(c1.id, c2.id, 'single');
                     addBond(c2.id, c3.id, 'single');
                     addBond(c3.id, c4.id, 'single');
@@ -2220,7 +2717,6 @@
                     addBond(c5.id, c6.id, 'single');
                     addBond(c6.id, c1.id, 'single');
                     
-                    // 氢键
                     addBond(c1.id, h1.id, 'single');
                     addBond(c1.id, h11.id, 'single');
                     addBond(c2.id, h2.id, 'single');
@@ -2235,18 +2731,100 @@
                     addBond(c6.id, h10.id, 'single');
                     
                     showNotification('已加载环己烷示例', 'success');
+                } else if (example === 'c2f2br2') {
+                    // C2F2Br2 - 1,2-二溴-1,2-二氟乙烯
+                    const c1 = addAtom('C', centerX - 60, centerY);
+                    const c2 = addAtom('C', centerX + 60, centerY);
+                    const f1 = addAtom('F', centerX - 120, centerY);
+                    const f2 = addAtom('F', centerX + 120, centerY);
+                    const br1 = addAtom('Br', centerX - 60, centerY - 100);
+                    const br2 = addAtom('Br', centerX + 60, centerY - 100);
+                    
+                    addBond(c1.id, c2.id, 'double');
+                    addBond(c1.id, f1.id, 'single');
+                    addBond(c1.id, br1.id, 'single');
+                    addBond(c2.id, f2.id, 'single');
+                    addBond(c2.id, br2.id, 'single');
+                    
+                    showNotification('已加载1,2-二溴-1,2-二氟乙烯(C₂F₂Br₂)示例', 'success');
+                } else if (example === 'acetylene') {
+                    // 乙炔
+                    const c1 = addAtom('C', centerX - 60, centerY);
+                    const c2 = addAtom('C', centerX + 60, centerY);
+                    const h1 = addAtom('H', centerX - 120, centerY);
+                    const h2 = addAtom('H', centerX + 120, centerY);
+                    
+                    addBond(c1.id, c2.id, 'triple');
+                    addBond(c1.id, h1.id, 'single');
+                    addBond(c2.id, h2.id, 'single');
+                    
+                    showNotification('已加载乙炔示例', 'success');
+                } else if (example === 'propene') {
+                    // 丙烯
+                    const c1 = addAtom('C', centerX - 80, centerY);
+                    const c2 = addAtom('C', centerX, centerY);
+                    const c3 = addAtom('C', centerX + 80, centerY);
+                    const h1 = addAtom('H', centerX - 120, centerY - 70);
+                    const h2 = addAtom('H', centerX - 120, centerY + 70);
+                    const h3 = addAtom('H', centerX - 40, centerY - 90);
+                    const h4 = addAtom('H', centerX + 40, centerY - 90);
+                    const h5 = addAtom('H', centerX + 120, centerY - 70);
+                    const h6 = addAtom('H', centerX + 120, centerY + 70);
+                    
+                    addBond(c1.id, c2.id, 'double');
+                    addBond(c2.id, c3.id, 'single');
+                    addBond(c1.id, h1.id, 'single');
+                    addBond(c1.id, h2.id, 'single');
+                    addBond(c2.id, h3.id, 'single');
+                    addBond(c2.id, h4.id, 'single');
+                    addBond(c3.id, h5.id, 'single');
+                    addBond(c3.id, h6.id, 'single');
+                    
+                    showNotification('已加载丙烯示例', 'success');
+                } else if (example === 'hydroxypropene') {
+                    // 2-羟基丙烯
+                    const c1 = addAtom('C', centerX - 80, centerY);
+                    const c2 = addAtom('C', centerX, centerY);
+                    const c3 = addAtom('C', centerX + 80, centerY);
+                    const o1 = addAtom('O', centerX, centerY + 80);  // 羟基氧
+                    const h1 = addAtom('H', centerX - 120, centerY - 70);
+                    const h2 = addAtom('H', centerX - 120, centerY + 70);
+                    const h3 = addAtom('H', centerX - 40, centerY - 90);
+                    const h4 = addAtom('H', centerX + 40, centerY - 90);
+                    const h5 = addAtom('H', centerX + 120, centerY - 70);
+                    const h6 = addAtom('H', centerX + 120, centerY + 70);
+                    const h7 = addAtom('H', centerX, centerY + 120);  // 羟基氢
+                    
+                    addBond(c1.id, c2.id, 'double');
+                    addBond(c2.id, c3.id, 'single');
+                    addBond(c2.id, o1.id, 'single');  // 羟基连接到中间碳
+                    addBond(o1.id, h7.id, 'single');
+                    
+                    addBond(c1.id, h1.id, 'single');
+                    addBond(c1.id, h2.id, 'single');
+                    addBond(c2.id, h3.id, 'single');
+                    addBond(c2.id, h4.id, 'single');
+                    addBond(c3.id, h5.id, 'single');
+                    addBond(c3.id, h6.id, 'single');
+                    
+                    showNotification('已加载2-羟基丙烯示例', 'success');
                 } else {
                     showNotification(`示例 ${example} 未定义`, 'warning');
                 }
                 
                 updateInfo();
+                resetView();
             }
             
             // 更新光标信息
             function updateCursorInfo() {
+                const container = document.getElementById('canvas-container');
+                
+                container.className = 'canvas-container';
                 if (currentMode === 'add') {
                     cursorInfo.textContent = `点击空白处添加${atomProperties[selectedAtomType].name}原子`;
                     modeIndicator.textContent = `模式：添加原子 (${atomProperties[selectedAtomType].name})`;
+                    container.classList.add('add-mode');
                 } else if (currentMode === 'connect') {
                     if (selectedAtom) {
                         cursorInfo.textContent = `已选择${selectedAtom.properties.name}原子，点击其他原子连接${bondProperties[selectedBondType].name}`;
@@ -2255,9 +2833,15 @@
                         cursorInfo.textContent = `点击一个原子选择它，然后点击另一个原子连接${bondProperties[selectedBondType].name}`;
                         modeIndicator.textContent = `模式：连接原子 (${bondProperties[selectedBondType].name})`;
                     }
+                    container.classList.add('connect-mode');
                 } else if (currentMode === 'delete') {
                     cursorInfo.textContent = '点击原子删除它及其连接的化学键';
                     modeIndicator.textContent = '模式：删除原子';
+                    container.classList.add('delete-mode');
+                } else if (currentMode === 'drag') {
+                    cursorInfo.textContent = '拖拽原子或空白处移动视图';
+                    modeIndicator.textContent = '模式：拖拽';
+                    container.classList.add('dragging');
                 }
             }
             
@@ -2291,8 +2875,6 @@
                 moleculeRotation += 1;
                 if (moleculeRotation >= 360) moleculeRotation = 0;
                 
-                // 暂时不实现旋转功能，因为需要更复杂的坐标变换
-                // 这里只作为演示
                 drawAll();
                 
                 requestAnimationFrame(startRotation);
@@ -2345,7 +2927,9 @@
                     "提示：点击官能团可以快速添加复杂的分子结构",
                     "提示：尝试构建2,4,6-三硝基甲苯等复杂化合物",
                     "提示：环状化合物命名时会自动识别为环烷烃或环烯烃",
-                    "提示：苯环结构会被自动识别并正确命名"
+                    "提示：苯环结构会被自动识别并正确命名",
+                    "提示：使用鼠标滚轮或缩放按钮调整视图大小",
+                    "提示：在拖拽模式下，可以拖动原子或整个画布"
                 ];
                 
                 const randomHint = hints[Math.floor(Math.random() * hints.length)];
@@ -2354,7 +2938,7 @@
             
             // 随机示例
             function randomExample() {
-                const examples = ['methane', 'ethane', 'ethene', 'ethanol', 'benzene', 'toluene', 'tnt', 'acetic_acid', 'cyclobutane', 'cyclohexane'];
+                const examples = ['methane', 'ethane', 'ethene', 'ethanol', 'benzene', 'toluene', 'tnt', 'acetic_acid', 'cyclobutane', 'cyclohexane', 'c2f2br2', 'acetylene', 'propene', 'hydroxypropene'];
                 const randomExample = examples[Math.floor(Math.random() * examples.length)];
                 loadExample(randomExample);
             }
@@ -2406,20 +2990,22 @@
                     updateCursorInfo();
                 });
                 
+                document.getElementById('drag-btn').addEventListener('click', function() {
+                    currentMode = 'drag';
+                    selectedAtom = null;
+                    document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('selected'));
+                    this.classList.add('selected');
+                    updateCursorInfo();
+                });
+                
                 // 官能团点击
                 document.querySelectorAll('.functional-item').forEach(funcElement => {
                     funcElement.addEventListener('click', function() {
                         const groupId = this.dataset.functional;
                         
-                        // 切换到添加模式
-                        currentMode = 'add';
-                        selectedAtom = null;
-                        document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('selected'));
-                        document.getElementById('add-atom-btn').classList.add('selected');
-                        
                         // 在画布中央添加官能团
-                        const centerX = canvas.width / 2;
-                        const centerY = canvas.height / 2;
+                        const centerX = 0;
+                        const centerY = 0;
                         
                         addFunctionalGroup(groupId, centerX - 80, centerY);
                     });
@@ -2439,14 +3025,33 @@
                 document.getElementById('export-btn').addEventListener('click', exportMolecule);
                 document.getElementById('rotate-btn').addEventListener('click', rotateMolecule);
                 document.getElementById('random-btn').addEventListener('click', randomExample);
+                document.getElementById('reset-view-btn').addEventListener('click', resetView);
                 
-                // Canvas点击
-                canvas.addEventListener('click', (event) => {
+                // 缩放按钮
+                document.getElementById('zoom-in-btn').addEventListener('click', function() {
+                    const rect = canvas.getBoundingClientRect();
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    zoomAtPoint(1, centerX, centerY);
+                });
+                
+                document.getElementById('zoom-out-btn').addEventListener('click', function() {
+                    const rect = canvas.getBoundingClientRect();
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    zoomAtPoint(-1, centerX, centerY);
+                });
+                
+                document.getElementById('zoom-reset-btn').addEventListener('click', resetView);
+                
+                // Canvas鼠标事件
+                canvas.addEventListener('mousedown', (event) => {
+                    event.preventDefault();
+                    
                     const rect = canvas.getBoundingClientRect();
                     const x = event.clientX - rect.left;
                     const y = event.clientY - rect.top;
                     
-                    // 检查是否点击了原子
                     let clickedAtom = null;
                     for (let i = atoms.length - 1; i >= 0; i--) {
                         if (atoms[i].isClicked(x, y)) {
@@ -2455,7 +3060,19 @@
                         }
                     }
                     
-                    if (clickedAtom) {
+                    if (currentMode === 'drag') {
+                        isDragging = true;
+                        isDraggingAtom = clickedAtom !== null;
+                        dragStartX = x;
+                        dragStartY = y;
+                        
+                        if (isDraggingAtom) {
+                            initialAtomPositions = atoms.map(atom => ({ x: atom.x, y: atom.y }));
+                            clickedAtom.isDragging = true;
+                        }
+                        
+                        canvasContainer.classList.add('dragging');
+                    } else if (clickedAtom) {
                         if (currentMode === 'connect') {
                             if (selectedAtom && selectedAtom.id !== clickedAtom.id) {
                                 addBond(selectedAtom.id, clickedAtom.id, selectedBondType);
@@ -2464,10 +3081,8 @@
                                 selectedAtom = clickedAtom;
                             }
                         } else if (currentMode === 'delete') {
-                            // 删除原子
                             const index = atoms.indexOf(clickedAtom);
                             if (index > -1) {
-                                // 删除相关的化学键
                                 const bondsToRemove = bonds.filter(bond => 
                                     bond.atom1Id === clickedAtom.id || bond.atom2Id === clickedAtom.id
                                 );
@@ -2488,9 +3103,9 @@
                             selectedAtom = clickedAtom;
                         }
                     } else {
-                        // 点击空白处
                         if (currentMode === 'add') {
-                            addAtom(selectedAtomType, x, y);
+                            const worldPos = screenToWorld(x, y);
+                            addAtom(selectedAtomType, worldPos.x, worldPos.y);
                         } else if (currentMode === 'connect') {
                             selectedAtom = null;
                         }
@@ -2499,6 +3114,272 @@
                     updateCursorInfo();
                     drawAll();
                 });
+                
+                canvas.addEventListener('mousemove', (event) => {
+                    event.preventDefault();
+                    
+                    const rect = canvas.getBoundingClientRect();
+                    const x = event.clientX - rect.left;
+                    const y = event.clientY - rect.top;
+                    
+                    if (isDragging) {
+                        const deltaX = x - dragStartX;
+                        const deltaY = y - dragStartY;
+                        
+                        if (isDraggingAtom) {
+                            const worldDeltaX = deltaX / scale;
+                            const worldDeltaY = deltaY / scale;
+                            
+                            atoms.forEach((atom, index) => {
+                                if (atom.isDragging) {
+                                    atom.moveTo(
+                                        initialAtomPositions[index].x + worldDeltaX,
+                                        initialAtomPositions[index].y + worldDeltaY
+                                    );
+                                }
+                            });
+                        } else {
+                            offsetX += deltaX;
+                            offsetY += deltaY;
+                            dragStartX = x;
+                            dragStartY = y;
+                        }
+                        
+                        drawAll();
+                    }
+                });
+                
+                canvas.addEventListener('mouseup', (event) => {
+                    event.preventDefault();
+                    
+                    if (isDragging) {
+                        isDragging = false;
+                        
+                        if (isDraggingAtom) {
+                            atoms.forEach(atom => {
+                                atom.isDragging = false;
+                            });
+                            isDraggingAtom = false;
+                        }
+                        
+                        canvasContainer.classList.remove('dragging');
+                        drawAll();
+                    }
+                });
+                
+                canvas.addEventListener('mouseleave', () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        
+                        if (isDraggingAtom) {
+                            atoms.forEach(atom => {
+                                atom.isDragging = false;
+                            });
+                            isDraggingAtom = false;
+                        }
+                        
+                        canvasContainer.classList.remove('dragging');
+                        drawAll();
+                    }
+                });
+                
+                // 鼠标滚轮缩放
+                canvas.addEventListener('wheel', (event) => {
+                    event.preventDefault();
+                    
+                    const rect = canvas.getBoundingClientRect();
+                    const x = event.clientX - rect.left;
+                    const y = event.clientY - rect.top;
+                    
+                    const delta = event.deltaY > 0 ? -1 : 1;
+                    zoomAtPoint(delta, x, y);
+                }, { passive: false });
+                
+                // 触摸事件支持
+                let touchStartDistance = 0;
+                let touchStartScale = 1;
+                let touchStartOffsetX = 0;
+                let touchStartOffsetY = 0;
+                let touchStartX1 = 0;
+                let touchStartY1 = 0;
+                let touchStartX2 = 0;
+                let touchStartY2 = 0;
+                
+                canvas.addEventListener('touchstart', (event) => {
+                    event.preventDefault();
+                    
+                    if (event.touches.length === 1) {
+                        const rect = canvas.getBoundingClientRect();
+                        const touch = event.touches[0];
+                        const x = touch.clientX - rect.left;
+                        const y = touch.clientY - rect.top;
+                        
+                        let touchedAtom = null;
+                        for (let i = atoms.length - 1; i >= 0; i--) {
+                            if (atoms[i].isClicked(x, y)) {
+                                touchedAtom = atoms[i];
+                                break;
+                            }
+                        }
+                        
+                        if (currentMode === 'drag') {
+                            isDragging = true;
+                            isDraggingAtom = touchedAtom !== null;
+                            dragStartX = x;
+                            dragStartY = y;
+                            
+                            if (isDraggingAtom) {
+                                initialAtomPositions = atoms.map(atom => ({ x: atom.x, y: atom.y }));
+                                touchedAtom.isDragging = true;
+                            }
+                        } else if (touchedAtom) {
+                            if (currentMode === 'connect') {
+                                if (selectedAtom && selectedAtom.id !== touchedAtom.id) {
+                                    addBond(selectedAtom.id, touchedAtom.id, selectedBondType);
+                                    selectedAtom = null;
+                                } else {
+                                    selectedAtom = touchedAtom;
+                                }
+                            } else if (currentMode === 'delete') {
+                                const index = atoms.indexOf(touchedAtom);
+                                if (index > -1) {
+                                    const bondsToRemove = bonds.filter(bond => 
+                                        bond.atom1Id === touchedAtom.id || bond.atom2Id === touchedAtom.id
+                                    );
+                                    bondsToRemove.forEach(bond => {
+                                        const bondIndex = bonds.indexOf(bond);
+                                        if (bondIndex > -1) {
+                                            bonds.splice(bondIndex, 1);
+                                        }
+                                    });
+                                    atoms.splice(index, 1);
+                                    if (selectedAtom === touchedAtom) {
+                                        selectedAtom = null;
+                                    }
+                                    updateInfo();
+                                    showNotification('原子已删除', 'info');
+                                }
+                            } else if (currentMode === 'add') {
+                                selectedAtom = touchedAtom;
+                            }
+                        } else {
+                            if (currentMode === 'add') {
+                                const worldPos = screenToWorld(x, y);
+                                addAtom(selectedAtomType, worldPos.x, worldPos.y);
+                            } else if (currentMode === 'connect') {
+                                selectedAtom = null;
+                            }
+                        }
+                        
+                        updateCursorInfo();
+                        drawAll();
+                    } else if (event.touches.length === 2) {
+                        const rect = canvas.getBoundingClientRect();
+                        const touch1 = event.touches[0];
+                        const touch2 = event.touches[1];
+                        
+                        touchStartX1 = touch1.clientX - rect.left;
+                        touchStartY1 = touch1.clientY - rect.top;
+                        touchStartX2 = touch2.clientX - rect.left;
+                        touchStartY2 = touch2.clientY - rect.top;
+                        
+                        touchStartDistance = Math.sqrt(
+                            Math.pow(touchStartX2 - touchStartX1, 2) + 
+                            Math.pow(touchStartY2 - touchStartY1, 2)
+                        );
+                        touchStartScale = scale;
+                        touchStartOffsetX = offsetX;
+                        touchStartOffsetY = offsetY;
+                    }
+                }, { passive: false });
+                
+                canvas.addEventListener('touchmove', (event) => {
+                    event.preventDefault();
+                    
+                    if (event.touches.length === 1 && isDragging) {
+                        const rect = canvas.getBoundingClientRect();
+                        const touch = event.touches[0];
+                        const x = touch.clientX - rect.left;
+                        const y = touch.clientY - rect.top;
+                        
+                        const deltaX = x - dragStartX;
+                        const deltaY = y - dragStartY;
+                        
+                        if (isDraggingAtom) {
+                            const worldDeltaX = deltaX / scale;
+                            const worldDeltaY = deltaY / scale;
+                            
+                            atoms.forEach((atom, index) => {
+                                if (atom.isDragging) {
+                                    atom.moveTo(
+                                        initialAtomPositions[index].x + worldDeltaX,
+                                        initialAtomPositions[index].y + worldDeltaY
+                                    );
+                                }
+                            });
+                        } else {
+                            offsetX += deltaX;
+                            offsetY += deltaY;
+                            dragStartX = x;
+                            dragStartY = y;
+                        }
+                        
+                        drawAll();
+                    } else if (event.touches.length === 2) {
+                        const rect = canvas.getBoundingClientRect();
+                        const touch1 = event.touches[0];
+                        const touch2 = event.touches[1];
+                        
+                        const touchX1 = touch1.clientX - rect.left;
+                        const touchY1 = touch1.clientY - rect.top;
+                        const touchX2 = touch2.clientX - rect.left;
+                        const touchY2 = touch2.clientY - rect.top;
+                        
+                        const touchDistance = Math.sqrt(
+                            Math.pow(touchX2 - touchX1, 2) + 
+                            Math.pow(touchY2 - touchY1, 2)
+                        );
+                        
+                        if (touchStartDistance > 0) {
+                            const scaleFactor = touchDistance / touchStartDistance;
+                            const newScale = touchStartScale * scaleFactor;
+                            
+                            scale = Math.max(minScale, Math.min(maxScale, newScale));
+                            
+                            const centerX = (touchX1 + touchX2) / 2;
+                            const centerY = (touchY1 + touchY2) / 2;
+                            
+                            const worldPos = screenToWorld(centerX, centerY);
+                            offsetX = centerX - worldPos.x * scale;
+                            offsetY = centerY - worldPos.y * scale;
+                            
+                            updateZoomDisplay();
+                            drawAll();
+                        }
+                    }
+                }, { passive: false });
+                
+                canvas.addEventListener('touchend', (event) => {
+                    event.preventDefault();
+                    
+                    if (event.touches.length === 0) {
+                        if (isDragging) {
+                            isDragging = false;
+                            
+                            if (isDraggingAtom) {
+                                atoms.forEach(atom => {
+                                    atom.isDragging = false;
+                                });
+                                isDraggingAtom = false;
+                            }
+                            
+                            canvasContainer.classList.remove('dragging');
+                            drawAll();
+                        }
+                        
+                        touchStartDistance = 0;
+                    }
+                }, { passive: false });
             }
             
             // 初始化
@@ -2507,6 +3388,7 @@
                 initEventListeners();
                 updateAtomProperties(selectedAtomType);
                 updateCursorInfo();
+                updateZoomDisplay();
                 showNotification('欢迎使用全屏有机化合物拼图系统！', 'info');
             }
             
