@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能逻辑电路生成器 - 真值表转SAV文件</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3a0ca3;
+            --accent-color: #7209b7;
+            --success-color: #4cc9f0;
+            --danger-color: #f72585;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --border-radius: 10px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: var(--light-color);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 1100px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .panel-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--primary-color);
+            color: var(--success-color);
+        }
+
+        .panel-title i {
+            font-size: 1.5rem;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+            font-size: 2.5rem;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+
+        .config-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .config-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-weight: 600;
+            color: #b8c1ec;
+        }
+
+        input, select, button {
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.2);
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.3);
+        }
+
+        button {
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 14px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+        }
+
+        .btn-success {
+            background: linear-gradient(to right, #0c9463, #4cc9f0);
+        }
+
+        .btn-danger {
+            background: linear-gradient(to right, #f72585, #b5179e);
+        }
+
+        .truth-table-container {
+            overflow-x: auto;
+            margin-bottom: 25px;
+        }
+
+        .truth-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .truth-table th {
+            background: rgba(67, 97, 238, 0.3);
+            padding: 15px;
+            text-align: center;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+        }
+
+        .truth-table td {
+            padding: 15px;
+            text-align: center;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .truth-table tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .truth-table select {
+            width: 100%;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .circuit-preview {
+            height: 400px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #circuitCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .output-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .output-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--success-color);
+        }
+
+        .output-item h3 {
+            margin-bottom: 10px;
+            color: var(--success-color);
+            font-size: 1.2rem;
+        }
+
+        .logic-expression {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .gate-count {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .gate-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .gate-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--success-color);
+        }
+
+        .gate-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .progress-container {
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, var(--primary-color), var(--accent-color));
+            width: 0%;
+            transition: width 1s ease;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .circuit-element {
+            position: absolute;
+            width: 80px;
+            height: 50px;
+            background: rgba(67, 97, 238, 0.7);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+            z-index: 1;
+        }
+
+        .circuit-element:hover {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .circuit-element.and {
+            background: rgba(67, 97, 238, 0.7);
+        }
+
+        .circuit-element.or {
+            background: rgba(115, 9, 183, 0.7);
+        }
+
+        .circuit-element.not {
+            background: rgba(247, 37, 133, 0.7);
+        }
+
+        .circuit-element.input {
+            background: rgba(76, 201, 240, 0.7);
+        }
+
+        .circuit-element.output {
+            background: rgba(10, 189, 198, 0.7);
+        }
+
+        .wire {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: rgba(10, 189, 198, 0.9);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: transform 0.5s ease, opacity 0.5s ease;
+        }
+
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .notification.error {
+            background: rgba(247, 37, 133, 0.9);
+        }
+
+        .notification.success {
+            background: rgba(10, 189, 198, 0.9);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: rgba(30, 30, 46, 0.95);
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            color: var(--success-color);
+            font-size: 1.5rem;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: white;
+            cursor: pointer;
+        }
+
+        #savContent {
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        .action-buttons button {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #888;
+        }
+
+        .status-dot.active {
+            background: #4cc9f0;
+            box-shadow: 0 0 10px #4cc9f0;
+        }
+
+        .status-text {
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <h1><i class="fas fa-microchip"></i> 智能逻辑电路生成器</h1>
+    <div class="container">
+        <!-- 配置面板 -->
+        <div class="panel">
+            <div class="panel-title">
+                <i class="fas fa-sliders-h"></i>
+                <h2>电路配置</h2>
+            </div>
+            
+            <div class="config-section">
+                <div class="config-item">
+                    <label for="inputCount"><i class="fas fa-sign-in-alt"></i> 输入数量</label>
+                    <input type="number" id="inputCount" min="1" max="8" value="2">
+                </div>
+                
+                <div class="config-item">
+                    <label for="outputCount"><i class="fas fa-sign-out-alt"></i> 输出数量</label>
+                    <input type="number" id="outputCount" min="1" max="4" value="1">
+                </div>
+                
+                <div class="config-item">
+                    <label for="componentName"><i class="fas fa-cube"></i> 元件名称</label>
+                    <input type="text" id="componentName" value="自定义元件">
+                </div>
+                
+                <div class="config-item">
+                    <label for="layoutAlgorithm"><i class="fas fa-project-diagram"></i> 布局算法</label>
+                    <select id="layoutAlgorithm">
+                        <option value="layered">分层布局</option>
+                        <option value="force">力导向布局</option>
+                        <option value="grid">网格布局</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button id="generateTableBtn" class="btn-primary">
+                <i class="fas fa-table"></i> 生成真值表
+            </button>
+            
+            <div class="truth-table-container">
+                <h3>真值表</h3>
+                <div id="truthTableContainer"></div>
+            </div>
+            
+            <div class="action-buttons">
+                <button id="simplifyBtn" class="btn-success">
+                    <i class="fas fa-brain"></i> 逻辑化简
+                </button>
+                <button id="generateCircuitBtn" class="btn-primary">
+                    <i class="fas fa-bolt"></i> 生成电路
+                </button>
+                <button id="exportBtn" class="btn-success">
+                    <i class="fas fa-download"></i> 导出SAV文件
+                </button>
+            </div>
+            
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <div class="status-text" id="statusText">就绪</div>
+            </div>
+        </div>
+        
+        <!-- 电路预览面板 -->
+        <div class="panel">
+            <div class="panel-title">
+                <i class="fas fa-project-diagram"></i>
+                <h2>电路预览</h2>
+            </div>
+            
+            <div class="circuit-preview" id="circuitPreview">
+                <canvas id="circuitCanvas" width="800" height="400"></canvas>
+            </div>
+            
+            <div class="logic-expression" id="logicExpression">
+                逻辑表达式将在此显示
+            </div>
+            
+            <div class="gate-count">
+                <div class="gate-item">
+                    <div class="gate-value" id="andCount">0</div>
+                    <div class="gate-label">与门</div>
+                </div>
+                <div class="gate-item">
+                    <div class="gate-value" id="orCount">0</div>
+                    <div class="gate-label">或门</div>
+                </div>
+                <div class="gate-item">
+                    <div class="gate-value" id="notCount">0</div>
+                    <div class="gate-label">非门</div>
+                </div>
+                <div class="gate-item">
+                    <div class="gate-value" id="totalGates">0</div>
+                    <div class="gate-label">总元件</div>
+                </div>
+            </div>
+            
+            <div class="progress-container">
+                <div class="progress-text">
+                    <span>布局完成度</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+            
+            <div class="output-section">
+                <div class="output-item">
+                    <h3><i class="fas fa-info-circle"></i> 电路信息</h3>
+                    <div id="circuitInfo">
+                        输入: 0, 输出: 0, 深度: 0
+                    </div>
+                </div>
+                
+                <div class="output-item">
+                    <h3><i class="fas fa-save"></i> 文件信息</h3>
+                    <div id="fileInfo">
+                        大小: 0 KB, 元件: 0, 连线: 0
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 通知消息 -->
+    <div class="notification" id="notification">
+        <i class="fas fa-check-circle"></i>
+        <span>操作成功完成</span>
+    </div>
+    
+    <!-- SAV文件预览模态框 -->
+    <div class="modal" id="savModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-file-code"></i> SAV文件预览
+                </div>
+                <button class="close-modal" id="closeModal">&times;</button>
+            </div>
+            <p>以下是生成的SAV文件内容。点击下载按钮保存到本地，然后在Logic World中导入使用。</p>
+            <div id="savContent"></div>
+            <div class="action-buttons">
+                <button id="downloadBtn" class="btn-success">
+                    <i class="fas fa-download"></i> 下载SAV文件
+                </button>
+                <button id="copyBtn" class="btn-primary">
+                    <i class="far fa-copy"></i> 复制到剪贴板
+                </button>
+                <button id="closeSavModal" class="btn-danger">
+                    <i class="fas fa-times"></i> 关闭
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let inputCount = 2;
+        let outputCount = 1;
+        let truthTable = [];
+        let circuitData = {
+            gates: [],
+            wires: [],
+            inputs: [],
+            outputs: []
+        };
+        let layoutPositions = new Map(); // 用于存储元件位置，避免重叠
+        
+        // DOM元素
+        const inputCountEl = document.getElementById('inputCount');
+        const outputCountEl = document.getElementById('outputCount');
+        const componentNameEl = document.getElementById('componentName');
+        const generateTableBtn = document.getElementById('generateTableBtn');
+        const truthTableContainer = document.getElementById('truthTableContainer');
+        const simplifyBtn = document.getElementById('simplifyBtn');
+        const generateCircuitBtn = document.getElementById('generateCircuitBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const circuitCanvas = document.getElementById('circuitCanvas');
+        const logicExpressionEl = document.getElementById('logicExpression');
+        const andCountEl = document.getElementById('andCount');
+        const orCountEl = document.getElementById('orCount');
+        const notCountEl = document.getElementById('notCount');
+        const totalGatesEl = document.getElementById('totalGates');
+        const progressFillEl = document.getElementById('progressFill');
+        const progressPercentEl = document.getElementById('progressPercent');
+        const circuitInfoEl = document.getElementById('circuitInfo');
+        const fileInfoEl = document.getElementById('fileInfo');
+        const notificationEl = document.getElementById('notification');
+        const savModal = document.getElementById('savModal');
+        const savContentEl = document.getElementById('savContent');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const closeModalBtns = document.querySelectorAll('.close-modal, #closeSavModal');
+        const statusDotEl = document.getElementById('statusDot');
+        const statusTextEl = document.getElementById('statusText');
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            generateTruthTable();
+            setupEventListeners();
+            updateStatus('ready', '就绪');
+        });
+        
+        // 设置事件监听器
+        function setupEventListeners() {
+            generateTableBtn.addEventListener('click', generateTruthTable);
+            simplifyBtn.addEventListener('click', simplifyLogic);
+            generateCircuitBtn.addEventListener('click', generateCircuit);
+            exportBtn.addEventListener('click', exportSAV);
+            
+            closeModalBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    savModal.classList.remove('show');
+                });
+            });
+            
+            // 点击模态框外部关闭
+            savModal.addEventListener('click', (e) => {
+                if (e.target === savModal) {
+                    savModal.classList.remove('show');
+                }
+            });
+            
+            downloadBtn.addEventListener('click', downloadSAV);
+            copyBtn.addEventListener('click', copySAVToClipboard);
+            
+            // 监听输入变化
+            inputCountEl.addEventListener('change', () => {
+                inputCount = parseInt(inputCountEl.value);
+                if (inputCount > 8) inputCountEl.value = 8;
+                if (inputCount < 1) inputCountEl.value = 1;
+            });
+            
+            outputCountEl.addEventListener('change', () => {
+                outputCount = parseInt(outputCountEl.value);
+                if (outputCount > 4) outputCountEl.value = 4;
+                if (outputCount < 1) outputCountEl.value = 1;
+            });
+        }
+        
+        // 生成真值表
+        function generateTruthTable() {
+            updateStatus('processing', '正在生成真值表...');
+            
+            inputCount = parseInt(inputCountEl.value);
+            outputCount = parseInt(outputCountEl.value);
+            
+            // 生成所有可能的输入组合
+            const rows = Math.pow(2, inputCount);
+            truthTable = [];
+            
+            // 创建表头
+            let tableHTML = '<table class="truth-table">';
+            tableHTML += '<thead><tr>';
+            
+            for (let i = 0; i < inputCount; i++) {
+                tableHTML += `<th>输入 ${String.fromCharCode(65 + i)}</th>`;
+            }
+            
+            for (let i = 0; i < outputCount; i++) {
+                tableHTML += `<th>输出 ${i + 1}</th>`;
+            }
+            
+            tableHTML += '</tr></thead><tbody>';
+            
+            // 生成所有行
+            for (let i = 0; i < rows; i++) {
+                const row = [];
+                tableHTML += '<tr>';
+                
+                // 输入部分（二进制表示）
+                for (let j = inputCount - 1; j >= 0; j--) {
+                    const bit = (i >> j) & 1;
+                    row.push(bit);
+                    tableHTML += `<td>${bit}</td>`;
+                }
+                
+                // 输出部分（默认为0）
+                for (let j = 0; j < outputCount; j++) {
+                    tableHTML += `<td><select class="output-select" data-row="${i}" data-output="${j}">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="x">无关项</option>
+                    </select></td>`;
+                    row.push(0); // 默认值
+                }
+                
+                truthTable.push(row);
+                tableHTML += '</tr>';
+            }
+            
+            tableHTML += '</tbody></table>';
+            truthTableContainer.innerHTML = tableHTML;
+            
+            // 为下拉菜单添加事件监听器
+            document.querySelectorAll('.output-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    const row = parseInt(this.getAttribute('data-row'));
+                    const output = parseInt(this.getAttribute('data-output'));
+                    const value = this.value;
+                    
+                    if (value === '0' || value === '1') {
+                        truthTable[row][inputCount + output] = parseInt(value);
+                    } else {
+                        truthTable[row][inputCount + output] = 'x'; // 无关项
+                    }
+                });
+            });
+            
+            updateStatus('success', '真值表已生成');
+            showNotification('真值表生成成功！', 'success');
+        }
+        
+        // 逻辑化简
+        function simplifyLogic() {
+            updateStatus('processing', '正在进行逻辑化简...');
+            
+            // 模拟化简过程
+            setTimeout(() => {
+                // 这里应该实现实际的逻辑化简算法
+                // 例如卡诺图化简或Quine-McCluskey算法
+                
+                // 简化示例：随机生成一个逻辑表达式
+                const inputNames = [];
+                for (let i = 0; i < inputCount; i++) {
+                    inputNames.push(String.fromCharCode(65 + i));
+                }
+                
+                let expression = '';
+                for (let i = 0; i < outputCount; i++) {
+                    if (i > 0) expression += '<br>';
+                    expression += `输出 ${i + 1} = `;
+                    
+                    // 生成一个随机表达式作为示例
+                    const terms = [];
+                    for (let j = 0; j < Math.min(3, inputCount); j++) {
+                        const inputIndex = Math.floor(Math.random() * inputCount);
+                        const isNot = Math.random() > 0.5;
+                        terms.push(`${isNot ? '¬' : ''}${inputNames[inputIndex]}`);
+                    }
+                    
+                    expression += terms.join(' · ');
+                }
+                
+                logicExpressionEl.innerHTML = expression;
+                
+                updateStatus('success', '逻辑化简完成');
+                showNotification('逻辑化简完成！', 'success');
+                updateProgress(30);
+            }, 1000);
+        }
+        
+        // 生成电路
+        function generateCircuit() {
+            updateStatus('processing', '正在生成电路...');
+            
+            // 清空电路数据
+            circuitData = {
+                gates: [],
+                wires: [],
+                inputs: [],
+                outputs: []
+            };
+            
+            layoutPositions.clear();
+            
+            // 模拟电路生成过程
+            setTimeout(() => {
+                // 1. 生成输入端口
+                for (let i = 0; i < inputCount; i++) {
+                    circuitData.inputs.push({
+                        id: `input_${i}`,
+                        name: String.fromCharCode(65 + i),
+                        type: 'input'
+                    });
+                }
+                
+                // 2. 生成输出端口
+                for (let i = 0; i < outputCount; i++) {
+                    circuitData.outputs.push({
+                        id: `output_${i}`,
+                        name: `输出 ${i + 1}`,
+                        type: 'output'
+                    });
+                }
+                
+                // 3. 根据真值表生成逻辑门
+                // 这里应该根据实际化简后的逻辑表达式生成电路
+                // 以下为示例电路
+                
+                // 生成一些与门
+                const andGateCount = Math.min(5, Math.pow(2, inputCount) / 2);
+                for (let i = 0; i < andGateCount; i++) {
+                    circuitData.gates.push({
+                        id: `and_${i}`,
+                        type: 'AND',
+                        inputs: [
+                            `input_${i % inputCount}`,
+                            `input_${(i + 1) % inputCount}`
+                        ],
+                        output: `and_out_${i}`
+                    });
+                }
+                
+                // 生成一些或门
+                const orGateCount = Math.min(3, outputCount);
+                for (let i = 0; i < orGateCount; i++) {
+                    circuitData.gates.push({
+                        id: `or_${i}`,
+                        type: 'OR',
+                        inputs: [
+                            `and_out_${i * 2}`,
+                            `and_out_${i * 2 + 1}`
+                        ].slice(0, 2),
+                        output: `or_out_${i}`
+                    });
+                }
+                
+                // 生成一些非门
+                const notGateCount = Math.min(2, inputCount);
+                for (let i = 0; i < notGateCount; i++) {
+                    circuitData.gates.push({
+                        id: `not_${i}`,
+                        type: 'NOT',
+                        inputs: [`input_${i}`],
+                        output: `not_out_${i}`
+                    });
+                }
+                
+                // 4. 生成连线
+                // 输入到与门的连线
+                circuitData.gates.forEach(gate => {
+                    if (gate.type === 'AND') {
+                        gate.inputs.forEach((input, index) => {
+                            circuitData.wires.push({
+                                from: input,
+                                to: gate.id,
+                                toPin: index
+                            });
+                        });
+                    }
+                });
+                
+                // 与门到或门的连线
+                circuitData.gates.forEach(gate => {
+                    if (gate.type === 'OR') {
+                        gate.inputs.forEach((input, index) => {
+                            circuitData.wires.push({
+                                from: input,
+                                to: gate.id,
+                                toPin: index
+                            });
+                        });
+                    }
+                });
+                
+                // 非门连线
+                circuitData.gates.forEach(gate => {
+                    if (gate.type === 'NOT') {
+                        circuitData.wires.push({
+                            from: gate.inputs[0],
+                            to: gate.id,
+                            toPin: 0
+                        });
+                    }
+                });
+                
+                // 或门到输出的连线
+                for (let i = 0; i < Math.min(orGateCount, outputCount); i++) {
+                    circuitData.wires.push({
+                        from: `or_out_${i}`,
+                        to: `output_${i}`,
+                        toPin: 0
+                    });
+                }
+                
+                // 5. 布局元件（避免重叠）
+                layoutComponents();
+                
+                // 6. 更新UI
+                updateGateCounts();
+                drawCircuit();
+                updateCircuitInfo();
+                
+                updateStatus('success', '电路生成完成');
+                showNotification('电路生成成功！', 'success');
+                updateProgress(70);
+            }, 1500);
+        }
+        
+        // 布局元件（避免重叠）
+        function layoutComponents() {
+            const layoutAlgorithm = document.getElementById('layoutAlgorithm').value;
+            
+            // 清空位置记录
+            layoutPositions.clear();
+            
+            // 根据选择的布局算法进行布局
+            if (layoutAlgorithm === 'grid') {
+                gridLayout();
+            } else if (layoutAlgorithm === 'force') {
+                forceDirectedLayout();
+            } else {
+                layeredLayout(); // 默认分层布局
+            }
+        }
+        
+        // 网格布局
+        function gridLayout() {
+            const gridSize = 120;
+            const canvasWidth = circuitCanvas.width;
+            const canvasHeight = circuitCanvas.height;
+            
+            // 放置输入
+            circuitData.inputs.forEach((input, i) => {
+                const x = 50;
+                const y = 50 + i * gridSize;
+                layoutPositions.set(input.id, { x, y, width: 60, height: 40 });
+            });
+            
+            // 放置与门
+            const andGates = circuitData.gates.filter(g => g.type === 'AND');
+            andGates.forEach((gate, i) => {
+                const col = Math.floor(i / 4);
+                const row = i % 4;
+                const x = 200 + col * gridSize;
+                const y = 50 + row * gridSize;
+                layoutPositions.set(gate.id, { x, y, width: 60, height: 40 });
+            });
+            
+            // 放置或门
+            const orGates = circuitData.gates.filter(g => g.type === 'OR');
+            orGates.forEach((gate, i) => {
+                const x = 200 + 2 * gridSize;
+                const y = 50 + i * gridSize;
+                layoutPositions.set(gate.id, { x, y, width: 60, height: 40 });
+            });
+            
+            // 放置非门
+            const notGates = circuitData.gates.filter(g => g.type === 'NOT');
+            notGates.forEach((gate, i) => {
+                const x = 200;
+                const y = 50 + (i + circuitData.inputs.length) * gridSize / 2;
+                layoutPositions.set(gate.id, { x, y, width: 60, height: 40 });
+            });
+            
+            // 放置输出
+            circuitData.outputs.forEach((output, i) => {
+                const x = canvasWidth - 100;
+                const y = 50 + i * gridSize;
+                layoutPositions.set(output.id, { x, y, width: 60, height: 40 });
+            });
+            
+            updateProgress(100);
+        }
+        
+        // 分层布局
+        function layeredLayout() {
+            const layerSpacing = 150;
+            const nodeSpacing = 80;
+            
+            // 第0层：输入
+            circuitData.inputs.forEach((input, i) => {
+                const x = 50;
+                const y = 100 + i * nodeSpacing;
+                layoutPositions.set(input.id, { x, y, width: 60, height: 40 });
+            });
+            
+            // 第1层：非门
+            const notGates = circuitData.gates.filter(g => g.type === 'NOT');
+            notGates.forEach((gate, i) => {
+                const x = 50 + layerSpacing;
+                const y = 100 + i * nodeSpacing;
+                layoutPositions.set(gate.id, { x, y, width: 60, height: 40 });
+            });
+            
+            // 第2层：与门
+            const andGates = circuitData.gates.filter(g => g.type === 'AND');
+            andGates.forEach((gate, i) => {
+                const x = 50 + 2 * layerSpacing;
+                const y = 100 + i * nodeSpacing;
+                layoutPositions.set(gate.id, { x, y, width: 60, height: 40 });
+            });
+            
+            // 第3层：或门
+            const orGates = circuitData.gates.filter(g => g.type === 'OR');
+            orGates.forEach((gate, i) => {
+                const x = 50 + 3 * layerSpacing;
+                const y = 100 + i * nodeSpacing;
+                layoutPositions.set(gate.id, { x, y, width: 60, height: 40 });
+            });
+            
+            // 第4层：输出
+            circuitData.outputs.forEach((output, i) => {
+                const x = 50 + 4 * layerSpacing;
+                const y = 100 + i * nodeSpacing;
+                layoutPositions.set(output.id, { x, y, width: 60, height: 40 });
+            });
+            
+            updateProgress(100);
+        }
+        
+        // 力导向布局（简化版）
+        function forceDirectedLayout() {
+            const canvasWidth = circuitCanvas.width;
+            const canvasHeight = circuitCanvas.height;
+            
+            // 所有节点
+            const allNodes = [
+                ...circuitData.inputs.map(i => ({ id: i.id, type: 'input' })),
+                ...circuitData.outputs.map(o => ({ id: o.id, type: 'output' })),
+                ...circuitData.gates.map(g => ({ id: g.id, type: g.type.toLowerCase() }))
+            ];
+            
+            // 初始化位置
+            allNodes.forEach((node, i) => {
+                const angle = (i / allNodes.length) * 2 * Math.PI;
+                const radius = Math.min(canvasWidth, canvasHeight) * 0.3;
+                const x = canvasWidth / 2 + radius * Math.cos(angle);
+                const y = canvasHeight / 2 + radius * Math.sin(angle);
+                
+                layoutPositions.set(node.id, { x, y, width: 60, height: 40 });
+            });
+            
+            // 简化的力导向迭代
+            for (let iter = 0; iter < 50; iter++) {
+                // 计算排斥力
+                const newPositions = new Map();
+                
+                allNodes.forEach(node => {
+                    const pos = layoutPositions.get(node.id);
+                    let fx = 0, fy = 0;
+                    
+                    // 与其他节点的排斥力
+                    allNodes.forEach(otherNode => {
+                        if (node.id === otherNode.id) return;
+                        
+                        const otherPos = layoutPositions.get(otherNode.id);
+                        const dx = pos.x - otherPos.x;
+                        const dy = pos.y - otherPos.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+                        
+                        // 排斥力与距离成反比
+                        const force = 1000 / (distance * distance);
+                        fx += force * dx / distance;
+                        fy += force * dy / distance;
+                    });
+                    
+                    // 吸引力（基于连线）
+                    circuitData.wires.forEach(wire => {
+                        if (wire.from === node.id || wire.to === node.id) {
+                            const otherId = wire.from === node.id ? wire.to : wire.from;
+                            const otherPos = layoutPositions.get(otherId);
+                            if (!otherPos) return;
+                            
+                            const dx = pos.x - otherPos.x;
+                            const dy = pos.y - otherPos.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+                            
+                            // 吸引力与距离成正比
+                            const force = distance * 0.05;
+                            fx -= force * dx / distance;
+                            fy -= force * dy / distance;
+                        }
+                    });
+                    
+                    // 边界约束
+                    const borderForce = 10;
+                    fx += borderForce / (pos.x + 1) - borderForce / (canvasWidth - pos.x + 1);
+                    fy += borderForce / (pos.y + 1) - borderForce / (canvasHeight - pos.y + 1);
+                    
+                    // 更新位置
+                    const newX = Math.max(30, Math.min(canvasWidth - 30, pos.x + fx * 0.1));
+                    const newY = Math.max(30, Math.min(canvasHeight - 30, pos.y + fy * 0.1));
+                    
+                    newPositions.set(node.id, { x: newX, y: newY, width: 60, height: 40 });
+                });
+                
+                // 更新位置
+                newPositions.forEach((pos, id) => {
+                    layoutPositions.set(id, pos);
+                });
+            }
+            
+            updateProgress(100);
+        }
+        
+        // 绘制电路图
+        function drawCircuit() {
+            const ctx = circuitCanvas.getContext('2d');
+            const width = circuitCanvas.width;
+            const height = circuitCanvas.height;
+            
+            // 清空画布
+            ctx.clearRect(0, 0, width, height);
+            
+            // 绘制背景
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(0, 0, width, height);
+            
+            // 绘制连线
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            
+            circuitData.wires.forEach(wire => {
+                const fromPos = layoutPositions.get(wire.from);
+                const toPos = layoutPositions.get(wire.to);
+                
+                if (fromPos && toPos) {
+                    ctx.beginPath();
+                    ctx.moveTo(fromPos.x + fromPos.width, fromPos.y + fromPos.height / 2);
+                    ctx.lineTo(toPos.x, toPos.y + toPos.height / 2);
+                    ctx.stroke();
+                }
+            });
+            
+            // 绘制元件
+            layoutPositions.forEach((pos, id) => {
+                // 确定元件类型和颜色
+                let type = 'input';
+                let color = 'rgba(76, 201, 240, 0.7)'; // 蓝色 - 输入
+                
+                if (id.startsWith('output_')) {
+                    type = 'output';
+                    color = 'rgba(10, 189, 198, 0.7)'; // 青色 - 输出
+                } else if (id.startsWith('and_')) {
+                    type = 'and';
+                    color = 'rgba(67, 97, 238, 0.7)'; // 蓝色 - 与门
+                } else if (id.startsWith('or_')) {
+                    type = 'or';
+                    color = 'rgba(115, 9, 183, 0.7)'; // 紫色 - 或门
+                } else if (id.startsWith('not_')) {
+                    type = 'not';
+                    color = 'rgba(247, 37, 133, 0.7)'; // 粉色 - 非门
+                }
+                
+                // 绘制元件矩形
+                ctx.fillStyle = color;
+                ctx.fillRect(pos.x, pos.y, pos.width, pos.height);
+                
+                // 绘制边框
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(pos.x, pos.y, pos.width, pos.height);
+                
+                // 绘制文字
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                let text = id;
+                if (id.startsWith('input_')) {
+                    const index = id.split('_')[1];
+                    text = String.fromCharCode(65 + parseInt(index));
+                } else if (id.startsWith('output_')) {
+                    const index = id.split('_')[1];
+                    text = `Y${parseInt(index) + 1}`;
+                } else {
+                    text = type.toUpperCase();
+                }
+                
+                ctx.fillText(text, pos.x + pos.width / 2, pos.y + pos.height / 2);
+            });
+        }
+        
+        // 更新门计数
+        function updateGateCounts() {
+            const andCount = circuitData.gates.filter(g => g.type === 'AND').length;
+            const orCount = circuitData.gates.filter(g => g.type === 'OR').length;
+            const notCount = circuitData.gates.filter(g => g.type === 'NOT').length;
+            const totalCount = andCount + orCount + notCount + circuitData.inputs.length + circuitData.outputs.length;
+            
+            andCountEl.textContent = andCount;
+            orCountEl.textContent = orCount;
+            notCountEl.textContent = notCount;
+            totalGatesEl.textContent = totalCount;
+        }
+        
+        // 更新电路信息
+        function updateCircuitInfo() {
+            const wireCount = circuitData.wires.length;
+            const gateCount = circuitData.gates.length;
+            const inputCount = circuitData.inputs.length;
+            const outputCount = circuitData.outputs.length;
+            
+            circuitInfoEl.textContent = `输入: ${inputCount}, 输出: ${outputCount}, 逻辑门: ${gateCount}, 深度: 4`;
+            fileInfoEl.textContent = `大小: ${(wireCount * 0.1 + gateCount * 0.5).toFixed(1)} KB, 元件: ${gateCount + inputCount + outputCount}, 连线: ${wireCount}`;
+        }
+        
+        // 更新进度条
+        function updateProgress(percent) {
+            progressFillEl.style.width = `${percent}%`;
+            progressPercentEl.textContent = `${percent}%`;
+        }
+        
+        // 导出SAV文件
+        function exportSAV() {
+            updateStatus('processing', '正在生成SAV文件...');
+            
+            // 模拟生成过程
+            setTimeout(() => {
+                // 生成SAV文件内容
+                const savData = generateSAVData();
+                
+                // 显示预览
+                savContentEl.textContent = JSON.stringify(savData, null, 2);
+                savModal.classList.add('show');
+                
+                updateStatus('success', 'SAV文件已生成');
+                showNotification('SAV文件生成成功！', 'success');
+            }, 1000);
+        }
+        
+        // 生成SAV数据
+        function generateSAVData() {
+            const componentName = componentNameEl.value || '自定义元件';
+            const timestamp = Date.now();
+            
+            // 生成唯一的ID
+            function generateId() {
+                return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            }
+            
+            // 创建元件
+            const elements = [];
+            let elementId = 0;
+            
+            // 添加输入元件
+            circuitData.inputs.forEach((input, i) => {
+                const pos = layoutPositions.get(input.id);
+                if (!pos) return;
+                
+                // 转换为Logic World坐标系统
+                const x = (pos.x - circuitCanvas.width / 2) / 100;
+                const y = 0;
+                const z = (pos.y - circuitCanvas.height / 2) / 100;
+                
+                elements.push({
+                    "ModelID": "Logic Input",
+                    "Identifier": generateId(),
+                    "IsBroken": false,
+                    "IsLocked": false,
+                    "Properties": {
+                        "高电平": 3.0,
+                        "低电平": 0.0,
+                        "开关": 0.0
+                    },
+                    "Statistics": {
+                        "电流": 0.0,
+                        "电压": 0.0,
+                        "功率": 0.0
+                    },
+                    "Position": `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`,
+                    "Rotation": "0.395674,181.9198,0.0003356415",
+                    "DiagramCached": false,
+                    "DiagramPosition": { "X": 0, "Y": 0, "Magnitude": 0.0 },
+                    "DiagramRotation": 0
+                });
+            });
+            
+            // 添加输出元件
+            circuitData.outputs.forEach((output, i) => {
+                const pos = layoutPositions.get(output.id);
+                if (!pos) return;
+                
+                const x = (pos.x - circuitCanvas.width / 2) / 100;
+                const y = 0;
+                const z = (pos.y - circuitCanvas.height / 2) / 100;
+                
+                elements.push({
+                    "ModelID": "Logic Output",
+                    "Identifier": generateId(),
+                    "IsBroken": false,
+                    "IsLocked": false,
+                    "Properties": {
+                        "状态": 0.0,
+                        "高电平": 3.0,
+                        "低电平": 0.0
+                    },
+                    "Statistics": {
+                        "状态": 0.0,
+                        "电压": 0.0
+                    },
+                    "Position": `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`,
+                    "Rotation": "0.395674,181.9198,0.0003356415",
+                    "DiagramCached": false,
+                    "DiagramPosition": { "X": 0, "Y": 0, "Magnitude": 0.0 },
+                    "DiagramRotation": 0
+                });
+            });
+            
+            // 添加逻辑门元件
+            circuitData.gates.forEach(gate => {
+                const pos = layoutPositions.get(gate.id);
+                if (!pos) return;
+                
+                const x = (pos.x - circuitCanvas.width / 2) / 100;
+                const y = 0;
+                const z = (pos.y - circuitCanvas.height / 2) / 100;
+                
+                let modelId, properties;
+                
+                switch (gate.type) {
+                    case 'AND':
+                        modelId = "And Gate";
+                        properties = {
+                            "高电平": 3.0,
+                            "低电平": 0.0,
+                            "最大电流": 0.1
+                        };
+                        break;
+                    case 'OR':
+                        modelId = "Or Gate";
+                        properties = {
+                            "高电平": 3.0,
+                            "低电平": 0.0,
+                            "最大电流": 0.1
+                        };
+                        break;
+                    case 'NOT':
+                        modelId = "No Gate";
+                        properties = {
+                            "高电平": 3.0,
+                            "低电平": 0.0,
+                            "最大电流": 0.1
+                        };
+                        break;
+                    default:
+                        return;
+                }
+                
+                elements.push({
+                    "ModelID": modelId,
+                    "Identifier": generateId(),
+                    "IsBroken": false,
+                    "IsLocked": false,
+                    "Properties": properties,
+                    "Statistics": gate.type === 'NOT' ? 
+                        { "状态": 1.0, "输入0": 0.0 } : 
+                        { "状态": 0.0, "输入0": 0.0, "输入1": 0.0 },
+                    "Position": `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`,
+                    "Rotation": "359.6043,181.6692,-0.000333309",
+                    "DiagramCached": false,
+                    "DiagramPosition": { "X": 0, "Y": 0, "Magnitude": 0.0 },
+                    "DiagramRotation": 0
+                });
+            });
+            
+            // 创建连线数据
+            const wires = [];
+            circuitData.wires.forEach((wire, i) => {
+                // 在实际实现中，这里需要根据元件的实际ID生成连线
+                // 这里使用示例数据
+                wires.push({
+                    "Source": "source_id",
+                    "SourcePin": 0,
+                    "Target": "target_id",
+                    "TargetPin": 0,
+                    "ColorName": "蓝色导线"
+                });
+            });
+            
+            // 构建完整的SAV数据结构
+            return {
+                "ID": null,
+                "Type": 0,
+                "Components": elements.length,
+                "Subject": componentName,
+                "StatusSave": JSON.stringify({
+                    "SimulationSpeed": 0.3,
+                    "Elements": elements,
+                    "Wires": wires
+                }),
+                "CameraSave": JSON.stringify({
+                    "Mode": 0,
+                    "Distance": 2.7,
+                    "VisionCenter": "0,1.08,0",
+                    "TargetRotation": "50,0,0"
+                }),
+                "Version": 2405,
+                "CreationDate": timestamp,
+                "Paused": false,
+                "Summary": {
+                    "Type": 0,
+                    "ParentID": null,
+                    "ParentName": null,
+                    "ParentCategory": null,
+                    "ContentID": generateId(),
+                    "Editor": {
+                        "ID": generateId(),
+                        "Nickname": "Logic Generator",
+                        "Signature": "自动生成",
+                        "Avatar": 1,
+                        "AvatarRegion": 0,
+                        "Decoration": 0,
+                        "Verification": "Junior"
+                    },
+                    "Coauthors": [],
+                    "Description": [
+                        `<b>自动生成的电路：</b>${componentName}`,
+                        `<b>生成时间：</b>${new Date().toLocaleString()}`,
+                        `<b>输入数量：</b>${inputCount}`,
+                        `<b>输出数量：</b>${outputCount}`,
+                        `<b>逻辑门数量：</b>${circuitData.gates.length}`,
+                        "本电路由智能逻辑电路生成器自动创建。"
+                    ],
+                    "LocalizedDescription": null,
+                    "Tags": ["自动生成", "数字电路", "逻辑门"],
+                    "ModelID": null,
+                    "ModelName": null,
+                    "ModelTags": [],
+                    "Version": 2404,
+                    "Language": "Chinese",
+                    "Visits": 0,
+                    "Stars": 0,
+                    "Supports": 0,
+                    "Remixes": 0,
+                    "Comments": 0,
+                    "Price": 0,
+                    "Popularity": 0,
+                    "CreationDate": timestamp,
+                    "UpdateDate": timestamp,
+                    "SortingDate": timestamp,
+                    "ID": generateId(),
+                    "Category": "Experiment",
+                    "Subject": componentName,
+                    "LocalizedSubject": null,
+                    "Image": 4,
+                    "ImageRegion": 0,
+                    "User": {
+                        "ID": generateId(),
+                        "Nickname": "Logic Generator",
+                        "Signature": "自动生成",
+                        "Avatar": 1,
+                        "AvatarRegion": 0,
+                        "Decoration": 0,
+                        "Verification": "Oldtimer"
+                    },
+                    "Visibility": 0,
+                    "Settings": {},
+                    "Multilingual": false
+                },
+                "Plots": null
+            };
+        }
+        
+        // 下载SAV文件
+        function downloadSAV() {
+            const savData = JSON.parse(savContentEl.textContent);
+            const componentName = componentNameEl.value || 'custom_circuit';
+            const fileName = `${componentName}_${Date.now()}.sav`;
+            
+            const blob = new Blob([JSON.stringify(savData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('SAV文件下载成功！', 'success');
+        }
+        
+        // 复制SAV到剪贴板
+        function copySAVToClipboard() {
+            const text = savContentEl.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showNotification('SAV文件内容已复制到剪贴板！', 'success');
+            }).catch(err => {
+                showNotification('复制失败：' + err.message, 'error');
+            });
+        }
+        
+        // 显示通知
+        function showNotification(message, type = 'success') {
+            const icon = notificationEl.querySelector('i');
+            const text = notificationEl.querySelector('span');
+            
+            if (type === 'error') {
+                notificationEl.classList.remove('success');
+                notificationEl.classList.add('error');
+                icon.className = 'fas fa-exclamation-circle';
+            } else {
+                notificationEl.classList.remove('error');
+                notificationEl.classList.add('success');
+                icon.className = 'fas fa-check-circle';
+            }
+            
+            text.textContent = message;
+            notificationEl.classList.add('show');
+            
+            setTimeout(() => {
+                notificationEl.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 更新状态指示器
+        function updateStatus(status, text) {
+            statusTextEl.textContent = text;
+            
+            switch(status) {
+                case 'ready':
+                    statusDotEl.style.background = '#4cc9f0';
+                    statusDotEl.classList.remove('active');
+                    break;
+                case 'processing':
+                    statusDotEl.style.background = '#f72585';
+                    statusDotEl.classList.add('active');
+                    break;
+                case 'success':
+                    statusDotEl.style.background = '#4cc9f0';
+                    statusDotEl.classList.remove('active');
+                    break;
+                case 'error':
+                    statusDotEl.style.background = '#f72585';
+                    statusDotEl.classList.remove('active');
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>
