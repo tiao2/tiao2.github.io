@@ -1503,151 +1503,156 @@ function generateSAVData() {
     // 生成元件数据
     const elements = [];
     
-    // 将所有元件放置在桌面的中心区域，而不是右上角
-    const desktopWidth = 5; // 桌面宽度范围（已缩小10倍）
-    const desktopHeight = 3; // 桌面高度范围（已缩小10倍）
+    // 定义坐标范围 (-1 到 1)
+    const minX = -1.0;
+    const maxX = 1.0;
+    const minZ = -1.0;
+    const maxZ = 1.0;
     
-    // 计算元件的起始位置（桌面中心）
-    const startX = -desktopWidth / 2;
-    const startZ = -desktopHeight / 2;
-    
-    // 计算元件间距
-    const spacingX = 1.2 * SCALE_FACTOR;
-    const spacingZ = 1.2 * SCALE_FACTOR;
-    
-    // 跟踪当前行和列
-    let currentRow = 0;
-    let currentCol = 0;
+    // 收集所有元件
+    const allElements = [];
     
     // 添加输入元件
-    circuitData.inputs.forEach((input, index) => {
-        // 使用网格布局，避免元件重叠
-        const x = startX + currentCol * spacingX;
-        const y = 0;
-        const z = startZ + currentRow * spacingZ;
-        
-        elements.push({
-            "ModelID": "Logic Input",
-            "Identifier": input.identifier,
-            "IsBroken": false,
-            "IsLocked": true, // 修改为锁定元件
-            "Properties": {
-                "高电平": 3.0,
-                "低电平": 0.0,
-                "开关": 0.0
-            },
-            "Statistics": {
-                "电流": 0.0,
-                "电压": 0.0,
-                "功率": 0.0
-            },
-            "Position": `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`,
-            "Rotation": "0.395674,181.9198,0.0003356415",
-            "DiagramCached": false,
-            "DiagramPosition": { "X": 0, "Y": 0, "Magnitude": 0.0 },
-            "DiagramRotation": 0
+    circuitData.inputs.forEach((input) => {
+        allElements.push({
+            type: 'input',
+            id: input.id,
+            identifier: input.identifier,
+            data: input
         });
-        
-        // 更新列和行
-        currentCol++;
-        if (currentCol > 3) { // 每行最多4个元件
-            currentCol = 0;
-            currentRow++;
-        }
     });
     
     // 添加输出元件
-    circuitData.outputs.forEach((output, index) => {
-        const x = startX + currentCol * spacingX;
-        const y = 0;
-        const z = startZ + currentRow * spacingZ;
-        
-        elements.push({
-            "ModelID": "Logic Output",
-            "Identifier": output.identifier,
-            "IsBroken": false,
-            "IsLocked": true, // 修改为锁定元件
-            "Properties": {
-                "状态": 0.0,
-                "高电平": 3.0,
-                "低电平": 0.0
-            },
-            "Statistics": {
-                "状态": 0.0,
-                "电压": 0.0
-            },
-            "Position": `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`,
-            "Rotation": "0.395674,181.9198,0.0003356415",
-            "DiagramCached": false,
-            "DiagramPosition": { "X": 0, "Y": 0, "Magnitude": 0.0 },
-            "DiagramRotation": 0
+    circuitData.outputs.forEach((output) => {
+        allElements.push({
+            type: 'output',
+            id: output.id,
+            identifier: output.identifier,
+            data: output
         });
-        
-        currentCol++;
-        if (currentCol > 3) {
-            currentCol = 0;
-            currentRow++;
-        }
     });
     
     // 添加逻辑门元件
-    circuitData.gates.forEach((gate, index) => {
-        const x = startX + currentCol * spacingX;
-        const y = 0;
-        const z = startZ + currentRow * spacingZ;
-        
-        let modelId, properties, statistics;
-        
-        switch (gate.type) {
-            case 'AND':
-                modelId = "And Gate";
-                properties = {
-                    "高电平": 3.0,
-                    "低电平": 0.0,
-                    "最大电流": 0.1
-                };
-                statistics = { "状态": 0.0, "输入0": 0.0, "输入1": 0.0 };
-                break;
-            case 'OR':
-                modelId = "Or Gate";
-                properties = {
-                    "高电平": 3.0,
-                    "低电平": 0.0,
-                    "最大电流": 0.1
-                };
-                statistics = { "状态": 0.0, "输入0": 0.0, "输入1": 0.0 };
-                break;
-            case 'NOT':
-                modelId = "No Gate";
-                properties = {
-                    "高电平": 3.0,
-                    "低电平": 0.0,
-                    "最大电流": 0.1
-                };
-                statistics = { "状态": 1.0, "输入0": 0.0 };
-                break;
-            default:
-                return;
-        }
-        
-        elements.push({
-            "ModelID": modelId,
-            "Identifier": gate.identifier,
-            "IsBroken": false,
-            "IsLocked": true, // 修改为锁定元件
-            "Properties": properties,
-            "Statistics": statistics,
-            "Position": `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`,
-            "Rotation": "359.6043,181.6692,-0.000333309",
-            "DiagramCached": false,
-            "DiagramPosition": { "X": 0, "Y": 0, "Magnitude": 0.0 },
-            "DiagramRotation": 0
+    circuitData.gates.forEach(gate => {
+        allElements.push({
+            type: 'gate',
+            id: gate.id,
+            identifier: gate.identifier,
+            data: gate
         });
+    });
+    
+    // 计算布局 - 使用百分比分配位置
+    const totalElements = allElements.length;
+    const rows = Math.ceil(Math.sqrt(totalElements));
+    const cols = Math.ceil(totalElements / rows);
+    
+    // 计算每个元件的位置 (均匀分布在 -1 到 1 之间)
+    allElements.forEach((element, index) => {
+        const row = Math.floor(index / cols);
+        const col = index % cols;
         
-        currentCol++;
-        if (currentCol > 3) {
-            currentCol = 0;
-            currentRow++;
+        // 计算百分比位置 (0% 到 100%)
+        const percentX = (col + 0.5) / cols;  // 中心点位置
+        const percentZ = (row + 0.5) / rows;  // 中心点位置
+        
+        // 转换为实际坐标 (-1 到 1)
+        const x = minX + percentX * (maxX - minX);
+        const z = minZ + percentZ * (maxZ - minZ);
+        const y = 0;
+        
+        // 根据元件类型生成数据
+        if (element.type === 'input') {
+            elements.push({
+                "ModelID": "Logic Input",
+                "Identifier": element.identifier,
+                "IsBroken": false,
+                "IsLocked": true,  // 设置为锁定
+                "Properties": {
+                    "高电平": 3.0,
+                    "低电平": 0.0,
+                    "开关": 0.0
+                },
+                "Statistics": {
+                    "电流": 0.0,
+                    "电压": 0.0,
+                    "功率": 0.0
+                },
+                "Position": `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`,
+                "Rotation": "0.395674,181.9198,0.0003356415",
+                "DiagramCached": false,
+                "DiagramPosition": { "X": 0, "Y": 0, "Magnitude": 0.0 },
+                "DiagramRotation": 0
+            });
+        } else if (element.type === 'output') {
+            elements.push({
+                "ModelID": "Logic Output",
+                "Identifier": element.identifier,
+                "IsBroken": false,
+                "IsLocked": true,  // 设置为锁定
+                "Properties": {
+                    "状态": 0.0,
+                    "高电平": 3.0,
+                    "低电平": 0.0
+                },
+                "Statistics": {
+                    "状态": 0.0,
+                    "电压": 0.0
+                },
+                "Position": `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`,
+                "Rotation": "0.395674,181.9198,0.0003356415",
+                "DiagramCached": false,
+                "DiagramPosition": { "X": 0, "Y": 0, "Magnitude": 0.0 },
+                "DiagramRotation": 0
+            });
+        } else if (element.type === 'gate') {
+            let modelId, properties, statistics;
+            
+            switch (element.data.type) {
+                case 'AND':
+                    modelId = "And Gate";
+                    properties = {
+                        "高电平": 3.0,
+                        "低电平": 0.0,
+                        "最大电流": 0.1
+                    };
+                    statistics = { "状态": 0.0, "输入0": 0.0, "输入1": 0.0 };
+                    break;
+                case 'OR':
+                    modelId = "Or Gate";
+                    properties = {
+                        "高电平": 3.0,
+                        "低电平": 0.0,
+                        "最大电流": 0.1
+                    };
+                    statistics = { "状态": 0.0, "输入0": 0.0, "输入1": 0.0 };
+                    break;
+                case 'NOT':
+                    modelId = "No Gate";
+                    properties = {
+                        "高电平": 3.0,
+                        "低电平": 0.0,
+                        "最大电流": 0.1
+                    };
+                    statistics = { "状态": 1.0, "输入0": 0.0 };
+                    break;
+                default:
+                    return;
+            }
+            
+            elements.push({
+                "ModelID": modelId,
+                "Identifier": element.identifier,
+                "IsBroken": false,
+                "IsLocked": true,  // 设置为锁定
+                "Properties": properties,
+                "Statistics": statistics,
+                "Position": `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`,
+                "Rotation": "359.6043,181.6692,-0.000333309",
+                "DiagramCached": false,
+                "DiagramPosition": { "X": 0, "Y": 0, "Magnitude": 0.0 },
+                "DiagramRotation": 0
+            });
         }
     });
     
@@ -1689,9 +1694,9 @@ function generateSAVData() {
         }),
         "CameraSave": JSON.stringify({
             "Mode": 0,
-            "Distance": 2.7,
-            "VisionCenter": "0,0.1,0", // 调整视角中心到桌面中心
-            "TargetRotation": "50,0,0"
+            "Distance": 3.0,  // 增加距离以看到所有元件
+            "VisionCenter": "0,0,0",  // 视角中心在原点
+            "TargetRotation": "45,0,0"
         }),
         "Version": 2405,
         "CreationDate": timestamp,
@@ -1718,11 +1723,13 @@ function generateSAVData() {
                 `<b>输入数量：</b>${inputCount}`,
                 `<b>输出数量：</b>${outputCount}`,
                 `<b>逻辑门数量：</b>${circuitData.gates.length}`,
-                "<b>注意：</b>所有元件已锁定",
+                `<b>坐标范围：</b>X: ${minX} 到 ${maxX}, Z: ${minZ} 到 ${maxZ}`,
+                `<b>元件状态：</b>所有元件已锁定，防止意外移动`,
+                `<b>总元件数：</b>${elements.length}`,
                 "本电路由智能逻辑电路生成器自动创建。"
             ],
             "LocalizedDescription": null,
-            "Tags": [],
+            "Tags": ["自动生成", "数字电路", "逻辑门", "锁定元件", "坐标约束"],
             "ModelID": null,
             "ModelName": null,
             "ModelTags": [],
@@ -1746,8 +1753,8 @@ function generateSAVData() {
             "ImageRegion": 0,
             "User": {
                 "ID": generateIdentifier(),
-                "Nickname": "自定义元件生成器",
-                "Signature": "Just a test",
+                "Nickname": "Logic Generator",
+                "Signature": "自动生成",
                 "Avatar": 1,
                 "AvatarRegion": 0,
                 "Decoration": 0,
